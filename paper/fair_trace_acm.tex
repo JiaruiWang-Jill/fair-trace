@@ -1,0 +1,830 @@
+%% FAIR-TRACE — ACM manuscript body
+%% Drop-in replacement for acmmanuscript.tex in Overleaf project 0808_Fair_Trace_ACM.
+%% Matches that project's template: \documentclass[manuscript,screen,review]{acmart},
+%% ACM-Reference-Format.bst, sample-base.bib.
+%%
+%% NOTE ON VENUE: this preamble keeps the project's existing proceedings-style setup
+%% (\acmConference). If the target really is ACM TIST (a journal), swap the
+%% \acmConference block for the \acmJournal{TIST} block marked below.
+
+\documentclass[manuscript,screen,review]{acmart}
+
+\AtBeginDocument{%
+  \providecommand\BibTeX{{Bib\TeX}}}
+
+%% ---------------------------------------------------------------------------
+%% Rights / venue metadata — placeholders, replace on acceptance
+%% ---------------------------------------------------------------------------
+\setcopyright{acmlicensed}
+\copyrightyear{2026}
+\acmYear{2026}
+\acmDOI{XXXXXXX.XXXXXXX}
+
+%% Proceedings form (matches the current template):
+\acmConference[Conference acronym 'XX]{Make sure to enter the correct
+  conference title from your rights confirmation email}{June 03--05,
+  2026}{Woodstock, NY}
+
+%% Journal form — uncomment these and comment out \acmConference above if
+%% submitting to ACM TIST, and change the class option to [acmsmall]{acmart}:
+% \acmJournal{TIST}
+% \acmVolume{0}
+% \acmNumber{0}
+% \acmArticle{0}
+% \acmMonth{8}
+
+%% ---------------------------------------------------------------------------
+%% Notation macros
+%% ---------------------------------------------------------------------------
+\newcommand{\Dburden}{\Delta_{\mathrm{burden}}}
+\newcommand{\Devidence}{\Delta_{\mathrm{evidence}}}
+\newcommand{\Dutility}{\Delta_{\mathrm{utility}}}
+\newcommand{\Dexposure}{\Delta_{\mathrm{exposure}}}
+\newcommand{\Dtransparency}{\Delta_{\mathrm{transparency}}}
+\newcommand{\Dmemory}{\Delta_{\mathrm{memory}}}
+\newcommand{\Binv}{B^{s}_{\mathrm{inv}}}
+\newcommand{\Bqual}{B^{s}_{\mathrm{qual}}}
+\newcommand{\JS}{\mathrm{JS}}
+\newcommand{\NDCG}{\mathrm{NDCG}}
+\newcommand{\SNSR}{\mathrm{SNSR}}
+\newcommand{\SNSV}{\mathrm{SNSV}}
+\newcommand{\Simbar}{\overline{\mathrm{Sim}}}
+\newcommand{\dom}{\mathrm{dom}}
+\newcommand{\dedup}{\mathrm{dedup}}
+\newcommand{\stage}[1]{\textsc{#1}}
+
+\begin{document}
+
+\title{FAIR-TRACE: A Stage-Wise Agentic Framework for Auditing Fairness in
+  LLM Recommendation Pipelines}
+
+%% TODO: complete author block and affiliations before submission.
+\author{Jiarui W.}
+\affiliation{%
+  \institution{[Institution]}
+  \city{[City]}
+  \country{[Country]}}
+\email{[email]}
+
+\author{Yashar Deldjoo}
+\affiliation{%
+  \institution{Politecnico di Bari}
+  \city{Bari}
+  \country{Italy}}
+
+\renewcommand{\shortauthors}{W. and Deldjoo}
+
+\begin{abstract}
+  Large language model agents increasingly deliver recommendations through a
+  multi-turn, multi-stage process rather than a single ranking call: they elicit
+  preferences conversationally, retrieve candidates, rank them, explain the
+  choice, and update a persistent memory of the user. Existing consumer-fairness
+  audits compare a neutral recommendation list against one produced under an
+  injected sensitive attribute, and therefore observe only the endpoint of this
+  process. We introduce FAIR-TRACE, a stage-wise fairness-measurement framework
+  that audits the trajectory instead of the call. FAIR-TRACE decomposes an
+  agentic pipeline into five stages---\stage{Elicit}, \stage{Retrieve},
+  \stage{Rank}, \stage{Explain}, \stage{Memory}---and defines a counterfactual
+  fairness delta at each, so that a disparity can be attributed to the stage
+  that introduced it and traced as it propagates across turns. We generalize the
+  item-similarity and true-preference-alignment benefits of prior work into a
+  per-stage invariance benefit and quality benefit, define three levels of
+  aggregation (turn, conversation, corpus) together with a compounding
+  coefficient, and pair closed-form metrics with a rubric-based LLM-as-judge
+  protocol for the stages that admit no ground truth. We instantiate the
+  framework on a preference-elicitation agent over real ReDial conversations
+  joined with MovieLens metadata.
+\end{abstract}
+
+%% CCS concepts — replace with the codes from the ACM CCS tool before submission.
+\begin{CCSXML}
+<ccs2012>
+  <concept>
+    <concept_id>10002951.10003317</concept_id>
+    <concept_desc>Information systems~Information retrieval</concept_desc>
+    <concept_significance>500</concept_significance>
+  </concept>
+  <concept>
+    <concept_id>10003456.10003462</concept_id>
+    <concept_desc>Social and professional topics~Computing / technology policy</concept_desc>
+    <concept_significance>300</concept_significance>
+  </concept>
+</ccs2012>
+\end{CCSXML}
+
+\ccsdesc[500]{Information systems~Information retrieval}
+\ccsdesc[300]{Social and professional topics~Computing / technology policy}
+
+\keywords{fairness auditing, conversational recommendation, agentic pipelines,
+  large language models, LLM-as-judge, counterfactual evaluation}
+
+\maketitle
+
+%% ===========================================================================
+\section{Introduction}
+\label{sec:intro}
+
+Large language model (LLM) agents are increasingly deployed not as single-shot
+recommenders but as multi-turn, multi-stage pipelines: an agent elicits a user's
+preferences through conversation, retrieves candidate items, ranks and filters
+them under constraints, explains its choices, and updates a persistent memory of
+the user before the next turn begins. This shift from a static ranking function
+to an interactive, stateful process changes where fairness can fail. A pipeline
+can produce a perfectly balanced final ranking while still asking users from one
+demographic group substantially more clarifying questions than another---a burden
+imposed before any item is ever retrieved---or it can retrieve a candidate pool
+already skewed by protected-attribute leakage before ranking has a chance to
+correct it, or it can silently let small first-turn disparities compound across a
+session's memory updates until they surface many turns later as a large
+divergence in recommended content. A single end-to-end fairness score computed on
+the final output cannot distinguish between these failure modes, and cannot say
+which stage of the agent's reasoning introduced the disparity in the first place.
+
+This gap motivates FAIR-TRACE, a stage-wise fairness-measurement framework for
+agentic LLM recommendation pipelines. Rather than auditing only the final
+recommendation list, FAIR-TRACE decomposes the pipeline into five
+stages---\stage{Elicit} $\rightarrow$ \stage{Retrieve} $\rightarrow$ \stage{Rank}
+$\rightarrow$ \stage{Explain} $\rightarrow$ \stage{Memory}---and defines a
+fairness delta at each stage under a counterfactual audit design: the same user,
+with the same underlying task and stated preferences, is run through the agent
+twice, differing only in a protected attribute $A$. Comparing behaviour at each
+stage across this counterfactual pair isolates where, if anywhere, the attribute
+changes what the agent does: $\Dburden$ at \stage{Elicit} (does clarification
+burden depend on $A$?), $\Devidence$ at \stage{Retrieve} (does the candidate pool
+depend on $A$?), $\Dutility$ and $\Dexposure$ at \stage{Rank} (do ranked
+relevance and exposure depend on $A$?), $\Dtransparency$ at \stage{Explain} (do
+the stated reasons remain faithful to the agent's actual reasoning, regardless of
+$A$?), and $\Dmemory$ (do disparities compound across turns as the agent's memory
+updates?).
+
+We instantiate this framework on a concrete agent: a preference-elicitation agent
+built on real ReDial conversations~\cite{li2018redial} joined against MovieLens
+item metadata~\cite{harper2015movielens}, replaying full multi-turn dialogues
+through all five stages per turn and logging per-stage traces. Stage-wise outputs
+are scored two ways: automatic metrics computed directly from the trace where a
+formula exists, and an LLM-as-judge protocol for what formulas cannot
+capture---whether a clarifying question smuggles in a demographic proxy, whether
+two divergent recommendation lists are nonetheless equally good for the user,
+whether an explanation is faithful to the trajectory that produced it, and
+whether a memory update is actually supported by user feedback.
+
+We frame the ReDial--MovieLens join and this particular agent as the empirical
+vehicle for the paper, not its contribution. The contribution is the general
+stage-wise counterfactual measurement framework, applicable to any agentic
+recommendation pipeline decomposable into an
+elicit/retrieve/rank/explain/memory-style trajectory, independent of the specific
+LLM, retriever, or domain used to instantiate it.
+
+\paragraph{Contributions}
+\begin{itemize}
+  \item A stage-wise counterfactual audit framework for agentic LLM
+    recommendation pipelines, defining a per-stage fairness delta that
+    \emph{localizes} where fairness violations are introduced across a
+    multi-turn trajectory rather than only at the final output.
+  \item A concrete instantiation on a preference-elicitation agent over real
+    ReDial conversations joined with MovieLens metadata, including per-stage
+    automatic metrics and a rubric-based LLM-as-judge protocol grounded in
+    established fairness formulas from the recommender-systems literature.
+  \item A stage-trajectory analysis showing how per-stage disparities do or do
+    not compound across turns, and where a sensitive ranker diverges from the
+    neutral ranker.
+\end{itemize}
+
+\paragraph{Outline}
+Section~\ref{sec:related} positions FAIR-TRACE against prior fairness-auditing
+frameworks. Section~\ref{sec:framework} formalizes the five-stage pipeline and
+the per-stage deltas. Section~\ref{sec:metrics} details the metrics and judge
+protocol. Sections~\ref{sec:setup} and~\ref{sec:results} report the setup and
+results, and Sections~\ref{sec:discussion} and~\ref{sec:conclusion} interpret
+them.
+
+%% ===========================================================================
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Fairness auditing for LLM-based recommender systems}
+The closest prior work is CFaiRLLM~\cite{cfairllm}, which evaluates consumer
+fairness in LLM recommenders by comparing recommendation lists generated with and
+without a sensitive attribute injected into the user profile prompt, using
+Jaccard similarity and a preference-aware ranking metric (PRAG) across multiple
+profile-sampling strategies on MovieLens and LastFM. Its central methodological
+contribution is treating list divergence as an \emph{insufficient} fairness
+signal on its own---a list can differ across a sensitive-attribute perturbation
+for legitimate preference-driven reasons---and it extends the analysis to
+intersectional attributes. FAIR-TRACE inherits this caution but differs in scope
+and granularity: CFaiRLLM audits a single-shot recommendation call, whereas
+FAIR-TRACE audits a multi-turn agentic pipeline with five internal stages, each
+carrying its own delta. This matters because a pipeline can diverge well before
+the final ranked list is produced---in clarification burden, or in a degenerate
+retrieval step---failure modes an output-only audit cannot see.
+FaiRLLM~\cite{fairllm}, CFaiRLLM's predecessor, established the
+fairness-through-list-comparison paradigm this line of work builds on, and is the
+origin of the paired-prompt divergence methodology from which our $\Devidence$
+check descends.
+
+\paragraph{Conversational and agentic recommendation}
+A growing body of work reframes recommendation as a multi-turn, tool-using
+agentic process. The roadmap survey for agentic recommender
+systems~\cite{agenticroadmap} formalizes this space with a taxonomy of agent
+roles and an autonomy ladder from passive rankers to multi-agent orchestration,
+and explicitly flags trajectory-level evaluation and fairness as open problems
+rather than solved ones---a gap FAIR-TRACE addresses by defining what a
+trajectory-level fairness audit looks like. Within conversational recommendation,
+benchmark efforts construct per-turn ground-truth positives with sampled hard
+negatives to support turn-level evaluation, which is methodologically adjacent to
+our use of real ReDial dialogues, but does not build in protected-attribute
+counterfactuals the way our audit design requires.
+%% TODO: cite ConvRecStudio here once the reference is verified.
+
+\paragraph{LLM-as-judge evaluation methodology}
+Our judging protocol builds on two lines of LLM-as-judge work outside the
+fairness literature. ECPO~\cite{ecpo} judges each turn of a conversational agent
+against a fixed-point rubric---a small set of named dimensions with explicit
+per-score anchors, returning a numeric score and a written justification per
+dimension, with a numeric threshold for flagging unsatisfactory turns. That is
+the direct template for our per-stage rubric, generalized from ECPO's
+dialogue-quality dimensions to five stage-specific fairness dimensions and
+extended with a paired, position-swapped judging mode ECPO does not have, since
+our unit of analysis is a counterfactual pair rather than a single trajectory.
+REASONER~\cite{reasoner} contributes a large human-labeled explanation-quality
+dataset that we use to calibrate the \stage{Explain}-stage rubric rather than as
+a plug-in ground truth, since its domain does not match movie recommendation
+directly.
+
+Relative to CFaiRLLM and FaiRLLM, FAIR-TRACE generalizes single-shot
+consumer-fairness auditing to a multi-stage agentic trajectory. Relative to the
+agentic-recommender roadmap survey, it operationalizes the trajectory-level
+fairness evaluation the survey identifies as open. Relative to ECPO and REASONER,
+it adapts general-purpose judging methodology to a paired counterfactual fairness
+setting.
+
+%% ===========================================================================
+\section{The FAIR-TRACE Evaluation Framework}
+\label{sec:framework}
+
+\subsection{Framework Overview}
+\label{sec:overview}
+
+\subsubsection{Fairness Definition}
+\label{sec:fairness-def}
+
+We take as our starting point the consumer-fairness definition established in the
+LLM-recommendation fairness literature~\cite{fairllm} and adopted by
+CFaiRLLM~\cite{cfairllm}: fairness is the absence of prejudice or favouritism
+toward user groups holding particular values of a sensitive attribute when
+generating recommendations, where that sensitive information is not itself a
+legitimate input to the recommendation task.
+
+FAIR-TRACE extends this definition from the recommendation to the process that
+produces it. An agentic pipeline is fair with respect to a protected attribute
+$A$ if, for two users identical in every task-relevant respect---the same
+conversation, the same stated preferences, the same catalog---and differing only
+in the value of $A$, the observable output of \emph{every} pipeline stage is
+invariant up to legitimate preference-driven variation. Output-level fairness is
+the special case in which the only observable considered is the final ranked
+list.
+
+The distinction is not cosmetic, because the output-level condition is
+satisfiable while the process-level condition is violated. An agent may impose a
+systematically heavier clarification burden on one group and nonetheless converge
+on a similar final list; it may retrieve a candidate pool skewed by attribute
+leakage that a downstream ranking step happens to correct; it may produce
+identical recommendations for two counterfactual users while offering one of them
+an explanation that cites, directly or obliquely, a protected attribute. Each is
+a fairness-relevant event that an output-only audit records as fair. Conversely,
+two trajectories may diverge at the output for entirely legitimate
+reasons---the caution CFaiRLLM raises against equating list divergence with
+unfairness---and a framework that localizes divergence to a stage is better
+placed to tell the two cases apart than one that observes only the endpoint.
+
+\subsubsection{Limitations of Output-Level Auditing and Our Contributions}
+\label{sec:limitations}
+
+Prior consumer-fairness evaluations of LLM recommenders compare a neutral
+recommendation list against one produced after injecting a sensitive attribute
+into the user prompt, and quantify the divergence. CFaiRLLM refines this paradigm
+in two ways we inherit: it observes that list divergence alone conflates bias
+with legitimate personalisation, and it therefore pairs an item-similarity
+benefit with a true-preference-alignment benefit measured against held-out ground
+truth. We depart from that line of work in three respects.
+
+First, \emph{the audited object is a trajectory rather than a call}. The unit of
+measurement is not a single prompt--response pair but an ordered sequence of
+stage outputs produced over multiple conversational turns, in which each stage
+consumes the output of its predecessor and the agent carries state forward
+between turns.
+
+Second, \emph{fairness is attributed to a location}. Because every stage is
+separately observable, a divergence between two counterfactual trajectories can
+be assigned to the stage at which it first appears, and its propagation through
+subsequent stages traced. This converts an aggregate verdict (``this system is
+unfair'') into a diagnostic one (``this system's clarification policy is
+attribute-sensitive, and the resulting divergence is amplified at ranking'').
+
+Third, \emph{fairness is measured over time}. Because a conversation comprises
+multiple turns and the agent's memory persists across them, a disparity
+introduced at an early turn may be attenuated, preserved, or amplified by later
+turns. We define the aggregation levels and the compounding statistic needed to
+observe this, which a single-shot design cannot express.
+
+Accordingly the framework contributes: (i) a stage-decomposed counterfactual
+audit in which each of the five stages carries its own fairness delta; (ii) three
+levels of aggregation---turn, conversation, and corpus---that make trajectory
+effects measurable; and (iii) a hybrid measurement stack pairing closed-form
+metrics, where a stage admits ground truth, with rubric-based LLM judging, where
+it does not.
+
+\subsection{The Five-Stage Pipeline as Measurement Substrate}
+\label{sec:substrate}
+
+Let $\mathcal{V}$ denote the item catalog, where each item $v$ carries a genre set
+$g(v)$ and a popularity rank $\rho(v)$, with lower $\rho(v)$ indicating a more
+mainstream item. Let $c$ denote a conversation with seeker turns
+$x_1,\dots,x_{T_c}$, and let $L_c \subseteq \mathcal{V}$ be the set of items the
+seeker explicitly endorses in $c$, which serves as ground truth for relevance.
+Let $A$ be a protected attribute with domain $\dom(A)$.
+
+The agent is required to externalize its reasoning as five stages, executed in
+order at every turn $t$, each emitting a structured output under a fixed schema.
+Writing $P_t$ for the preference state accumulated through turn $t$, with $P_0 =
+\emptyset$:
+
+\paragraph{\stage{Elicit}}
+$(p_t, \alpha_t, d_t, q_t) = f_1(x_t, P_{t-1})$, where $p_t$ is the set of
+preference attributes parsed from the current message, $\alpha_t$ is any
+protected attribute the user volunteered, $d_t \in \{0,1\}$ indicates whether
+further clarification is required, and $q_t$ is the clarifying question issued
+when $d_t = 1$. The preference state updates as $P_t = \dedup(P_{t-1} \cup p_t)$;
+preferences accumulate across turns and are never re-derived from scratch. By
+construction $\alpha_t$ is recorded but excluded from $P_t$.
+
+\paragraph{\stage{Retrieve}}
+$C_t = f_2(P_t)$, the ordered candidate list returned by a catalog query whose
+terms are drawn from $P_t$ alone. When the query returns no candidates the full
+catalog is substituted, so that a retrieval failure surfaces as a degenerate
+candidate set rather than an empty trajectory.
+
+\paragraph{\stage{Rank}}
+$(R_t, N_t) = f_3(C_t, P_t)$, where $R_t$ is a reordering of $C_t$ and $N_t$ is a
+set of per-item rationale notes constrained to be in one-to-one correspondence
+with $R_t$. Requiring a rationale per ranked item is what makes the ranking stage
+auditable rather than opaque.
+
+\paragraph{\stage{Explain}}
+$(v^{*}_t, e_t) = f_4(R_t, N_t)$, where $v^{*}_t$ is the top-ranked item and
+$e_t$ the user-facing explanation, required to cite only reasons actually present
+in $N_t$.
+
+\paragraph{\stage{Memory}}
+$(m_t, \Pi_t) = f_5(P_t, R_t, e_t)$, where $m_t$ is a durable note and $\Pi_t$ the
+running user profile carried into subsequent turns.
+
+The turn record is $\tau_t$, collecting all five stage outputs at $t$, and the
+trajectory for conversation $c$ is $\tau_c = (\tau_1,\dots,\tau_{T_c})$. The loop
+terminates at $T_c = \min\{t : d_t = 0\}$, or when the conversation's seeker turns
+are exhausted, whichever occurs first; $T_c$ is therefore itself an observable,
+and is the basis of the elicitation-burden measures below.
+
+Two design constraints make this substrate measurable. \stage{Retrieve} and
+\stage{Rank} are conceptually a single block---candidates are pulled and
+reordered together---but are logged as two distinct outputs, so that a divergence
+in the candidate pool is distinguishable from a divergence in how that pool was
+ordered. And because \stage{Elicit} is invoked once per turn against an
+accumulating state rather than once per conversation, turn-level quantities such
+as the number of clarification rounds and the redundancy of a given question are
+directly observable rather than simulated.
+
+\subsection{Trajectories, Benefits, and Stage-Wise Deltas}
+\label{sec:deltas}
+
+\subsubsection{Neutral and Sensitive Trajectories}
+\label{sec:trajectories}
+
+Following CFaiRLLM's contrast between a neutral and a sensitive-attribute-influenced
+ranking list, we define two trajectories per conversation. The \emph{neutral
+trajectory} $\tau_c$ is produced from an instruction containing the conversation
+and no sensitive descriptor. The \emph{sensitive trajectory} $\tau^{a}_c$ is
+produced from an instruction identical in every respect except that a descriptor
+asserting $A = a$ is present. The pair $(\tau_c, \tau^{a}_c)$ is the
+counterfactual unit of analysis; where the attribute is multi-valued, the family
+$\{\tau^{a}_c : a \in \dom(A)\}$ is compared against the shared neutral baseline.
+
+Because both trajectories replay the same real seeker turns against the same
+catalog, any difference between them is attributable to the descriptor, subject
+to the stochasticity of the underlying model---controlled by fixing decoding
+parameters and, where the model does not admit deterministic decoding, by
+repeating the pair and reporting dispersion.
+
+\subsubsection{Invariance and Quality Benefits}
+\label{sec:benefits}
+
+CFaiRLLM distinguishes an item-alignment benefit, measuring consistency between
+the neutral and sensitive lists, from a true-preference-alignment benefit,
+measuring whether recommendations match the user's genuine tastes. We generalize
+both to the stage level. For each stage $s$ let $O_s(\tau)$ denote that stage's
+audited observable: the clarification decision and question at \stage{Elicit}, the
+candidate set at \stage{Retrieve}, the ranked list at \stage{Rank}, the
+explanation at \stage{Explain}, and the updated profile at \stage{Memory}. We
+then define, for each stage, an \emph{invariance benefit}
+\begin{equation}
+  \Binv = \mathrm{sim}_s\!\left(O_s(\tau^{a}_c),\, O_s(\tau_c)\right),
+  \label{eq:binv}
+\end{equation}
+measuring how far the stage's output is preserved under the counterfactual
+perturbation, and a \emph{quality benefit} $\Bqual$, measuring the stage's output
+against ground truth where it exists---$L_c$ at \stage{Retrieve} and
+\stage{Rank}---and against a rubric where it does not.
+
+Reporting both is essential, and is the point on which we follow CFaiRLLM most
+closely: a low invariance benefit is evidence of attribute sensitivity only when
+it is \emph{not} accompanied by a corresponding, preference-justified change in
+the quality benefit. A stage whose output changes under the counterfactual while
+its alignment with the user's actual preferences is unchanged is the signature of
+bias; a stage whose output changes together with a genuine change in preference
+evidence is not.
+
+\subsubsection{Stage-Wise Fairness Deltas}
+\label{sec:stage-deltas}
+
+Each stage's delta instantiates the invariance benefit with an operator
+appropriate to the type of that stage's observable.
+
+\paragraph{$\Dburden$ (\stage{Elicit})}
+captures whether the cost imposed on the user to obtain a recommendation depends
+on the attribute. With $\beta(\tau) = \sum_t \mathbb{1}[d_t = 1]$ the number of
+clarification rounds the agent demands,
+\begin{equation}
+  \Dburden(c, a) = \beta(\tau^{a}_c) - \beta(\tau_c).
+  \label{eq:dburden}
+\end{equation}
+A positive value means the sensitive condition was made to work harder for the
+same recommendation. We report alongside it the difference in redundant-question
+rate, so that a burden difference driven by repetition is distinguishable from one
+driven by genuine additional elicitation.
+
+\paragraph{$\Devidence$ (\stage{Retrieve})}
+captures whether the evidence pool from which any recommendation could be drawn
+depends on the attribute. Adopting the Jaccard formulation used by CFaiRLLM, with
+$\JS@K(X, Y) = |X \cap Y| / |X \cup Y|$ over the top $K$ entries,
+\begin{equation}
+  \Devidence(c, a) = 1 - \JS@K\!\left(C^{a}_{T},\, C_{T}\right).
+  \label{eq:devidence}
+\end{equation}
+This is the stage at which FAIR-TRACE most directly generalizes prior work: the
+same divergence measure prior work applies to the final list, applied instead to
+the candidate pool that precedes it.
+
+\paragraph{$\Dutility$ and $\Dexposure$ (\stage{Rank})}
+separate two failure modes a single ranking metric conflates. Utility divergence
+is measured against ground truth, and exposure divergence against the popularity
+distribution:
+\begin{align}
+  \Dutility(c, a) &= \NDCG@K(R_T, L_c) - \NDCG@K(R^{a}_T, L_c),
+  \label{eq:dutility}\\
+  \Dexposure(c, a) &= \bar{\rho}\!\left(R^{a}_T[1{:}K]\right)
+                     - \bar{\rho}\!\left(R_T[1{:}K]\right),
+  \label{eq:dexposure}
+\end{align}
+where $\bar{\rho}$ denotes mean popularity rank over the top $K$. A positive
+$\Dutility$ indicates the sensitive condition received a less relevant ranking;
+because lower $\rho$ denotes a more mainstream item, a negative $\Dexposure$
+indicates the sensitive condition was pushed toward more mainstream content. We
+additionally report a pairwise order-concordance statistic between $R_T$ and
+$R^{a}_T$ in the spirit of CFaiRLLM's PRAG$^{*}$, counting the pairs of items
+whose relative order is preserved across the two lists, so that a reordering
+confined to the head of the list is not scored identically to one that permutes
+the whole ranking.
+
+\paragraph{$\Dtransparency$ (\stage{Explain})}
+captures whether the account the system gives of itself depends on the attribute.
+It combines a coverage difference---the change in the fraction of elicited
+preference attributes actually cited in the explanation---with a leakage
+indicator set whenever the explanation references the protected attribute
+directly or by evident proxy. The leakage indicator is treated as a hard failure
+rather than a graded quantity: an explanation citing a protected attribute as a
+reason is unfair irrespective of how well it covers the remaining attributes.
+
+\paragraph{$\Dmemory$ (\stage{Memory})}
+captures whether what the system durably retains about a user depends on the
+attribute:
+\begin{equation}
+  \Dmemory(c, a) = 1 - \JS\!\left(\Pi^{a}_T,\, \Pi_T\right),
+  \label{eq:dmemory}
+\end{equation}
+reported together with the difference in dropped-preference rate, the fraction of
+stated preferences absent from the retained profile. This stage has no ground
+truth in the sense the earlier stages do---there is no correct memory---and is
+therefore treated as an audit trail: it records what will silently condition
+future turns.
+
+\subsection{Levels of Aggregation and Group Structure}
+\label{sec:aggregation}
+
+\subsubsection{Turn, Conversation, and Corpus Levels}
+\label{sec:levels}
+
+The deltas above are defined per turn. Collecting them yields the three levels at
+which the framework reports. At the \emph{turn level}, the observation is the
+vector
+\begin{equation}
+  \delta_t = \left(\Dburden^{(t)}, \Devidence^{(t)}, \Dutility^{(t)},
+    \Dexposure^{(t)}, \Dtransparency^{(t)}, \Dmemory^{(t)}\right),
+  \label{eq:deltavec}
+\end{equation}
+the profile of where the pipeline diverged at a single step.
+
+At the \emph{conversation level}, the observation is the ordered sequence $D_c =
+(\delta_1,\dots,\delta_{T_c})$, a stage-by-turn matrix. This is the object the
+stage-trajectory figure visualizes, and it distinguishes a transient divergence at
+one turn from a persistent one. To summarize it we define the cumulative
+divergence and, when $\Phi_1 > 0$, the compounding coefficient
+\begin{equation}
+  \Phi_t = \sum_{t' \le t} \left\lVert \delta_{t'} \right\rVert_1,
+  \qquad
+  \kappa_c = \frac{\Phi_{T_c}}{T_c \cdot \Phi_1}.
+  \label{eq:compounding}
+\end{equation}
+Values $\kappa_c > 1$ indicate that per-turn divergence grew over the conversation
+rather than remaining at its initial level---the compounding effect that motivates
+a trajectory-level audit in the first place.
+
+At the \emph{corpus level}, deltas are averaged per stage across conversations to
+give the aggregate profile of which stages are attribute-sensitive for a given
+agent and attribute.
+
+\subsubsection{Independent and Intersectional Groups}
+\label{sec:groups}
+
+We follow CFaiRLLM in evaluating both independent and intersectional attribute
+groups. For a single attribute $A$ with values $\{a_1,\dots,a_n\}$, the
+independent group structure is $\mathcal{G}_{\mathrm{indep}} = \{G_{a_1},\dots,
+G_{a_n}\}$, for instance gender with values $\{\text{male}, \text{female}\}$. For
+two attributes $A$ and $B$, the intersectional structure is formed from
+$\mathcal{A}_{\mathrm{int}} = \{a_i \cap b_j\}$, yielding
+$\mathcal{G}_{\mathrm{inters}} = \{G_{a_1 b_1},\dots,G_{a_n b_m}\}$, for instance
+$\{\text{male-teen}, \text{female-adult}\}$. Every delta in
+Section~\ref{sec:stage-deltas} is defined identically over either structure, since
+each is computed against the shared neutral baseline; the only change is the set
+of sensitive trajectories generated per conversation. Intersectional evaluation
+matters here for the same reason it matters in the single-shot setting: a pipeline
+may be invariant with respect to each attribute considered alone and still treat a
+particular combination of them differently.
+
+\subsection{Evaluation Method}
+\label{sec:evalmethod}
+
+\subsubsection{Data Format for Agent Instructions}
+\label{sec:instructions}
+
+Each instruction issued to the agent has three components, mirroring the neutral
+and sensitive instruction templates of prior work. A \emph{sensitive descriptor},
+present only in the sensitive condition, asserts the attribute value under test. A
+\emph{conversational context} supplies the seeker's real turns up to the current
+point together with the preference state accumulated so far. A \emph{stage
+directive} names the stage to be executed and the schema its output must satisfy.
+
+A single system prompt, shared across all five stages, encodes the per-stage
+fairness constraints as behavioural requirements rather than post-hoc scoring
+criteria: that a volunteered attribute be recorded but never used as a preference
+signal nor allowed to influence whether, how often, or what the agent asks; that
+retrieval terms derive only from non-demographic preferences; that ranking not use
+the attribute and not reflexively favour the most popular candidate over a
+better-matching less popular one; that explanations cite only reasons actually
+used at ranking; and that memory not retain the attribute as though it were a
+taste signal. Stating the constraints in the prompt makes the audit a test of
+compliance under an explicit specification, which is the more demanding and more
+informative condition: a violation cannot be attributed to the agent not having
+been told.
+
+\subsubsection{Evaluation Procedure}
+\label{sec:procedure}
+
+The procedure for a conversation $c$ and attribute value $a$ is:
+
+\begin{enumerate}
+  \item \textbf{Generate trajectories.} Replay the seeker turns of $c$ under the
+    neutral condition to obtain $\tau_c$, and under each sensitive condition to
+    obtain $\tau^{a}_c$, executing all five stages at every turn and logging each
+    stage's structured output.
+  \item \textbf{Compute invariance benefits.} For each stage and turn, compare the
+    paired observables to obtain the deltas of Section~\ref{sec:stage-deltas}.
+  \item \textbf{Compute quality benefits.} Score each stage's output on its own
+    terms against $L_c$ where ground truth exists, so that a divergence can be
+    interpreted against whether alignment with the user's actual preferences was
+    affected.
+  \item \textbf{Score the stages that admit no closed form.} Apply the
+    rubric-based judge of Section~\ref{sec:judge} to every stage of every turn,
+    yielding a bounded fairness score and a written justification per stage-turn.
+  \item \textbf{Aggregate.} Roll turn-level results up to the conversation and
+    corpus levels per Section~\ref{sec:levels}, and compute the group-level
+    dispersion statistics of Section~\ref{sec:groupmetrics}.
+\end{enumerate}
+
+\paragraph{Instantiation scope}
+The instantiation reported in this paper executes step~1 in the neutral condition,
+in which protected attributes enter only where a seeker volunteers one in the
+original dialogue, together with steps~3 through~5; the paired sensitive condition
+and the paired deltas of step~2 are defined by the framework and are the subject
+of ongoing evaluation. Under the neutral condition the judge of
+Section~\ref{sec:judge} scores attribute-blindness \emph{within} a single
+trajectory rather than invariance \emph{across} a pair, which is the degenerate
+but still informative case of the design: it detects a stage acting on a
+volunteered attribute, though not a stage that would act on an injected one.
+
+\subsubsection{Computable Stage-Wise Metrics}
+\label{sec:computable}
+
+Where a stage admits ground truth or a closed-form definition, it is measured
+directly. \stage{Elicit} is measured by average turns to termination,
+redundant-question rate, preference-elicitation rate against the genres of the
+endorsed items, and success rate within a turn budget $T$. \stage{Retrieve} is
+measured by Recall@$K$, Precision@$K$, MRR, and $\NDCG@K$ against $L_c$.
+\stage{Rank} is measured by Hit@$K$ and by the popularity-rank gap between the
+top-$K$ ranked items and the endorsed items, the exposure signal entering
+$\Dexposure$. \stage{Explain} is measured by key-attribute coverage, the fraction
+of elicited preference attributes appearing in the explanation. \stage{Memory} is
+measured by dropped-preference rate.
+
+These quantities are proxies, and are treated as such. Keyword coverage does not
+establish that an explanation is faithful; lexical overlap does not establish that
+a clarifying question is semantically redundant; absence from a profile string
+does not distinguish a preference that was forgotten from one deliberately
+superseded. Each of these judgments is precisely what the rubric-based judge is
+introduced to supply, and we report the proxy and the judged score separately
+rather than merging them, since they measure different things.
+
+\subsubsection{LLM-as-Judge Stage Rubrics}
+\label{sec:judge}
+
+For the judgments no formula supplies, we adopt the fixed-point rubric design of
+ECPO~\cite{ecpo}, in which a judge scores each turn against a small number of
+named dimensions with explicit per-score anchors and returns structured output
+containing a numeric score and a written reason per dimension. We retarget it from
+dialogue-quality dimensions to the five stage-level fairness checks.
+
+Each stage is scored on three dimensions, weighted $2$, $2$, and $1$, giving a
+stage total in $[0,5]$ and a turn total in $[0,25]$ across the five stages. In
+every stage the first dimension is the attribute-invariance check
+proper---attribute-blind questioning at \stage{Elicit}, attribute-blind retrieval
+at \stage{Retrieve}, attribute-blind ranking at \stage{Rank}, absence of attribute
+leakage at \stage{Explain}, absence of attribute retention at \stage{Memory}. The
+second is the stage's principal quality-of-process check: non-redundancy,
+preference grounding, popularity-bias restraint, groundedness of claims, and
+preference fidelity respectively. The third is a single-point check on whether the
+stage's output is specific and proportionate rather than generic: proportionate
+burden, candidate support, rationale fidelity, user-facing clarity, and
+turn-over-turn consistency.
+
+Three design decisions follow from the auditing setting. The judge is a separate
+model instance from the agent under audit, so the system does not grade its own
+trace. The judge is invoked once per stage per turn rather than once per
+conversation, which is what makes turn-over-turn consistency at \stage{Memory}
+expressible at all. And the judge is asked for dimension scores and reasons but
+never for the stage total, which is summed in code, since arithmetic is not the
+judgment under test. The judge is further instructed to score conservatively where
+the trace provides nothing concrete to cite, so that absence of evidence is not
+rewarded as evidence of fairness. Following ECPO's threshold-triggered flagging,
+any stage-turn scoring below the maximum is flagged for manual review; we report
+the flagged fraction alongside the mean, since a high mean with a heavy tail is a
+different finding from a uniformly moderate score.
+
+\subsubsection{Group-Level Fairness Metrics}
+\label{sec:groupmetrics}
+
+To summarize disparity across the values of an attribute rather than within a
+single counterfactual pair, we adopt the two dispersion statistics introduced by
+CFaiRLLM, applied \emph{per stage}. Writing $\Simbar_s(a)$ for the mean invariance
+benefit of stage $s$ under attribute value $a$:
+\begin{align}
+  \SNSR_s@K &= \max_{a \in \dom(A)} \Simbar_s(a)
+             - \min_{a \in \dom(A)} \Simbar_s(a),
+  \label{eq:snsr}\\
+  \SNSV_s@K &= \sqrt{\frac{1}{|\dom(A)|} \sum_{a \in \dom(A)}
+               \left(\Simbar_s(a) - \mu_s\right)^2},
+  \qquad
+  \mu_s = \frac{1}{|\dom(A)|}\sum_{a' \in \dom(A)} \Simbar_s(a').
+  \label{eq:snsv}
+\end{align}
+Higher values of either indicate greater unfairness. Computing both per stage,
+rather than once for the system, yields a disparity profile across the pipeline:
+it identifies not merely that some groups are treated less similarly to the
+neutral baseline than others, but at which stage of the agent's reasoning that gap
+opens.
+
+\subsection{Setup}
+\label{sec:framework-setup}
+
+\subsubsection{Data}
+\label{sec:data}
+
+Dialogues and preferences are drawn from ReDial~\cite{li2018redial}, a corpus of
+10{,}006 crowdsourced seeker--recommender movie conversations, with movie mention
+placeholders resolved to titles. Genre and popularity metadata are joined from
+MovieLens~\cite{harper2015movielens} by normalized title match, with the number of
+MovieLens ratings for a title serving as the popularity signal underlying $\rho$.
+
+From the corpus we curate ten conversations, filtered to those with at least three
+movie mentions matched to MovieLens, at least two movies the seeker explicitly
+endorses---supplying $L_c$---and between four and eight seeker turns, then selected
+greedily for genre coverage so the shared catalog is not dominated by a single
+genre. The catalog is the union of movies mentioned across the selected
+conversations, $33$ unique titles. Constructing the catalog as a union rather than
+per conversation is deliberate: retrieval for any one conversation can surface
+items mentioned only in another, so retrieval metrics are not trivially saturated.
+
+\subsubsection{Agent Implementation}
+\label{sec:agent}
+
+The agent is implemented as five structured-output chains over a shared system
+prompt, one per stage, each constrained to a stage-specific schema so outputs are
+machine-checkable rather than free text. Retrieval is performed by a catalog
+search tool filtering on genre and popularity. The judge is a separate instance of
+the same interface, permitting a cheaper model to be substituted for bulk scoring
+without altering the agent under audit.
+
+\subsubsection{Post-Processing and Title Matching}
+\label{sec:postproc}
+
+Model-produced titles are normalized by lowercasing and whitespace stripping
+before being matched against the catalog by approximate sequence matching under a
+similarity threshold, so that formatting variation in generated titles does not
+register as a retrieval miss. Item identifiers, not titles, are used for every
+metric computation downstream of matching.
+
+%% ===========================================================================
+\section{Metrics and LLM-as-Judge Evaluation}
+\label{sec:metrics}
+
+%% TODO: expand Sections~\ref{sec:computable} and~\ref{sec:judge} into full metric
+%% definitions and the judge prompt design. The table below reports the automatic
+%% metrics already produced by the reference implementation.
+
+Table~\ref{tab:stage-metrics} reports the automatic stage-wise metrics produced by
+the reference implementation. These are single-conversation diagnostics rather
+than averages, and are reported as such; Section~\ref{sec:results} replaces them
+with results averaged over the full curated conversation set.
+
+\begin{table}[t]
+  \caption{FAIR-TRACE stage-wise automatic metrics on real ReDial conversations
+    joined with MovieLens metadata. Single-example diagnostic---not an average.}
+  \label{tab:stage-metrics}
+  \begin{tabular}{llr}
+    \toprule
+    Stage & Metric & Value \\
+    \midrule
+    \stage{Elicit}   & Average Turns (AT)                        & 5.000 \\
+    \stage{Elicit}   & Redundant Question Rate (RQR)             & 0.000 \\
+    \stage{Elicit}   & Preference Elicitation Rate (PER)         & 0.200 \\
+    \stage{Elicit}   & Success Rate@3                            & 0.000 \\
+    \midrule
+    \stage{Retrieve} & Recall@5                                  & 0.500 \\
+    \stage{Retrieve} & Precision@5                               & 0.200 \\
+    \stage{Retrieve} & MRR                                       & 0.500 \\
+    \stage{Retrieve} & NDCG@5                                    & 0.387 \\
+    \midrule
+    \stage{Rank}     & Hit@3                                     & 1.000 \\
+    \stage{Rank}     & Avg.\ popularity-rank gap (top-$K$ vs.\ liked) & 3.333 \\
+    \midrule
+    \stage{Explain}  & Key Attribute Coverage (KAC)              & 0.000 \\
+    \midrule
+    \stage{Memory}   & Dropped-preference rate                   & 0.667 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+%% ===========================================================================
+\section{Experimental Setup}
+\label{sec:setup}
+
+%% TODO: expand Section~\ref{sec:framework-setup} with model versions, decoding
+%% parameters, and the counterfactual attribute configurations under test.
+
+%% ===========================================================================
+\section{Results}
+\label{sec:results}
+
+%% TODO: stage-wise metric tables averaged over the curated conversation set,
+%% LLM-as-judge score summary, and the stage-trajectory figure.
+
+%% ===========================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+%% TODO: interpretation, limitations, threats to validity (single-agent
+%% counterfactual audit vs. deployed heterogeneity, LLM-judge bias, small curated
+%% conversation set).
+
+%% ===========================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+%% TODO: summarize the contribution and future work.
+
+\begin{acks}
+%% TODO: acknowledgments and funding.
+\end{acks}
+
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+
+\end{document}
