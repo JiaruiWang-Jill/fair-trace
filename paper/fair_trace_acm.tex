@@ -42,6 +42,7 @@
 \newcommand{\Dexposure}{\Delta_{\mathrm{exposure}}}
 \newcommand{\Dtransparency}{\Delta_{\mathrm{transparency}}}
 \newcommand{\Dmemory}{\Delta_{\mathrm{memory}}}
+\newcommand{\Dnorm}{\widetilde{\Delta}}
 \newcommand{\Binv}{B^{s}_{\mathrm{inv}}}
 \newcommand{\Bqual}{B^{s}_{\mathrm{qual}}}
 \newcommand{\JS}{\mathrm{JS}}
@@ -415,6 +416,21 @@ to the stochasticity of the underlying model---controlled by fixing decoding
 parameters and, where the model does not admit deterministic decoding, by
 repeating the pair and reporting dispersion.
 
+\paragraph{Aligning paired trajectories}
+The two trajectories need not have the same length. The stopping rule of
+Section~\ref{sec:substrate} makes $T_c$ an observable of the trajectory, so the
+sensitive condition has its own $T^{a}_c$, and the case $T^{a}_c \neq T_c$ is not
+an edge case but precisely the case $\Dburden$ exists to detect. All paired
+quantities are therefore defined turn-by-turn over the common prefix
+\begin{equation}
+  T^{\wedge}_c = \min\left(T_c,\, T^{a}_c\right),
+  \label{eq:align}
+\end{equation}
+with the residual $|T^{a}_c - T_c|$ carried by the burden delta alone rather than
+folded into the other deltas; a quantity written at $T$ below denotes its value at
+$t = T^{\wedge}_c$. Without this convention a non-zero burden delta would silently
+misalign every other delta on exactly the conversations where it fires.
+
 \subsubsection{Invariance and Quality Benefits}
 \label{sec:benefits}
 
@@ -435,6 +451,25 @@ perturbation, and a \emph{quality benefit} $\Bqual$, measuring the stage's outpu
 against ground truth where it exists---$L_c$ at \stage{Retrieve} and
 \stage{Rank}---and against a rubric where it does not.
 
+The operator $\mathrm{sim}_s$ is stage-specific, because the five observables are
+of five different types, and we state it once here rather than leaving it implicit
+in the deltas that follow: set overlap on the candidate pool at \stage{Retrieve}
+and on the canonicalised profile at \stage{Memory}; a ground-truth-referenced
+ranking score at \stage{Rank}; the clarification-demand rate at \stage{Elicit};
+and cited-attribute coverage at \stage{Explain}. Three of these---burden, utility,
+and exposure---are naturally expressed as signed differences rather than
+similarities. We therefore report each stage delta $\Dnorm_s(c,a) \in [0,1]$ as the
+normalised magnitude of its stage's divergence, defined per stage in
+Section~\ref{sec:stage-deltas}, and take
+\begin{equation}
+  \Binv = 1 - \Dnorm_s(c,a),
+  \label{eq:binvnorm}
+\end{equation}
+so that invariance benefit, divergence, and the group statistics of
+Section~\ref{sec:groupmetrics} are all expressed on one scale and in one
+direction. Signed deltas are retained and reported separately wherever the
+direction of a difference is itself informative.
+
 Reporting both is essential, and is the point on which we follow CFaiRLLM most
 closely: a low invariance benefit is evidence of attribute sensitivity only when
 it is \emph{not} accompanied by a corresponding, preference-justified change in
@@ -447,7 +482,13 @@ evidence is not.
 \label{sec:stage-deltas}
 
 Each stage's delta instantiates the invariance benefit with an operator
-appropriate to the type of that stage's observable.
+appropriate to the type of that stage's observable. We adopt one sign convention
+throughout: a delta is written so that a \emph{positive} value denotes the
+sensitive condition being treated worse than the neutral baseline. The normalised
+form $\Dnorm_s \in [0,1]$ entering Equation~\eqref{eq:binvnorm} and the
+aggregation of Section~\ref{sec:levels} is the magnitude of the delta divided by
+its own range, given per stage below; the signed form is what we report in
+per-stage tables, where the direction of the difference is the finding.
 
 \paragraph{$\Dburden$ (\stage{Elicit})}
 captures whether the cost imposed on the user to obtain a recommendation depends
@@ -462,6 +503,20 @@ same recommendation. We report alongside it the difference in redundant-question
 rate, so that a burden difference driven by repetition is distinguishable from one
 driven by genuine additional elicitation.
 
+Two properties of $\beta$ have to be stated, because ignoring them makes this the
+easiest delta in the set to misread. First, it is \emph{right-censored}: the loop
+terminates either at $d_t = 0$ or when the conversation's real seeker turns are
+exhausted, so on any conversation where the agent never self-terminates within the
+replay budget, $\beta(\tau) = T_c$ in both arms and the difference is
+identically zero irrespective of behaviour. This is not hypothetical---in the
+instantiation reported here the agent used all available turns without ever
+setting $d_t = 0$. We therefore report the censoring rate alongside the delta, and
+restrict the turn-count difference to conversations in which at least one arm
+terminated by $d_t = 0$. Second, as the uncensored companion we use the
+clarification-demand rate $\tilde{\beta}(\tau) = \beta(\tau)/T_c$, which remains
+defined under censoring; its difference across the pair, normalised to $[0,1]$, is
+the $\Dnorm$ form of this stage's delta.
+
 \paragraph{$\Devidence$ (\stage{Retrieve})}
 captures whether the evidence pool from which any recommendation could be drawn
 depends on the attribute. Adopting the Jaccard formulation used by CFaiRLLM, with
@@ -472,7 +527,16 @@ $\JS@K(X, Y) = |X \cap Y| / |X \cup Y|$ over the top $K$ entries,
 \end{equation}
 This is the stage at which FAIR-TRACE most directly generalizes prior work: the
 same divergence measure prior work applies to the final list, applied instead to
-the candidate pool that precedes it.
+the candidate pool that precedes it. The measure is total: the empty-union case
+cannot arise, because a query returning no candidates causes the full catalog to
+be substituted (Section~\ref{sec:substrate}). That same substitution, however,
+makes the delta degenerate when it fires in both arms---two full-catalog pools are
+trivially identical---so we report the fallback rate alongside the delta rather
+than allowing a retrieval failure to be recorded as evidence of invariance. Note
+also that Jaccard is deliberately rank-blind here: $C_t$ is an ordered list, but we
+attribute ordering effects to \stage{Rank}, where the order-concordance statistic
+below measures them, so that a pool difference and a pool-ordering difference are
+not conflated in a single number.
 
 \paragraph{$\Dutility$ and $\Dexposure$ (\stage{Rank})}
 separate two failure modes a single ranking metric conflates. Utility divergence
@@ -481,14 +545,20 @@ distribution:
 \begin{align}
   \Dutility(c, a) &= \NDCG@K(R_T, L_c) - \NDCG@K(R^{a}_T, L_c),
   \label{eq:dutility}\\
-  \Dexposure(c, a) &= \bar{\rho}\!\left(R^{a}_T[1{:}K]\right)
-                     - \bar{\rho}\!\left(R_T[1{:}K]\right),
+  \Dexposure(c, a) &= \frac{\bar{\rho}\!\left(R^{a}_T[1{:}K]\right)
+                     - \bar{\rho}\!\left(R_T[1{:}K]\right)}{|\mathcal{V}| - 1},
   \label{eq:dexposure}
 \end{align}
-where $\bar{\rho}$ denotes mean popularity rank over the top $K$. A positive
-$\Dutility$ indicates the sensitive condition received a less relevant ranking;
-because lower $\rho$ denotes a more mainstream item, a negative $\Dexposure$
-indicates the sensitive condition was pushed toward more mainstream content. We
+where $\bar{\rho}$ denotes mean popularity rank over the top $K$. Both are written
+under the convention of Section~\ref{sec:stage-deltas}, which is why the two
+subtractions run in opposite directions: a positive $\Dutility$ indicates the
+sensitive condition received a less relevant ranking, and because lower $\rho$
+denotes a more mainstream item, a negative $\Dexposure$ indicates the sensitive
+condition was pushed toward more mainstream content---a homogenisation of what it
+is shown rather than a loss of relevance, which is why the two are reported
+separately rather than combined. Dividing by $|\mathcal{V}| - 1$ puts $\Dexposure$
+on the same $[-1,1]$ scale as $\Dutility$; without it, exposure is measured in rank
+positions and dominates any aggregate that sums the deltas. We
 additionally report a pairwise order-concordance statistic between $R_T$ and
 $R^{a}_T$ in the spirit of CFaiRLLM's PRAG$^{*}$, counting the pairs of items
 whose relative order is preserved across the two lists, so that a reordering
@@ -500,17 +570,45 @@ captures whether the account the system gives of itself depends on the attribute
 It combines a coverage difference---the change in the fraction of elicited
 preference attributes actually cited in the explanation---with a leakage
 indicator set whenever the explanation references the protected attribute
-directly or by evident proxy. The leakage indicator is treated as a hard failure
-rather than a graded quantity: an explanation citing a protected attribute as a
-reason is unfair irrespective of how well it covers the remaining attributes.
+directly or by evident proxy. Writing $\mathrm{kac}(e_T) \in [0,1]$ for that
+coverage and $\ell(e^{a}_T) \in \{0,1\}$ for the leakage indicator,
+\begin{equation}
+  \Dtransparency(c, a) =
+  \begin{cases}
+    1 & \text{if } \ell(e^{a}_T) = 1,\\[2pt]
+    \mathrm{kac}(e_T) - \mathrm{kac}(e^{a}_T) & \text{otherwise.}
+  \end{cases}
+  \label{eq:dtransparency}
+\end{equation}
+The leakage indicator is treated as a hard failure rather than a graded quantity:
+an explanation citing a protected attribute as a reason is unfair irrespective of
+how well it covers the remaining attributes, so it saturates the delta rather than
+contributing a further increment to it. Because saturation destroys the
+distinction between a leaking explanation and a merely uninformative one, we
+report the leakage rate separately from the mean delta. One limitation of the
+coverage term is stated here rather than left to be discovered: computed as
+keyword containment against the elicited preference strings, $\mathrm{kac}$ is
+near-vacuous when those strings are free-form sentences rather than catalog
+attributes, and it requires attribute-level canonicalisation---matching over the
+genre and attribute set extracted from $P_T$---before its difference carries
+signal.
 
 \paragraph{$\Dmemory$ (\stage{Memory})}
 captures whether what the system durably retains about a user depends on the
 attribute:
 \begin{equation}
-  \Dmemory(c, a) = 1 - \JS\!\left(\Pi^{a}_T,\, \Pi_T\right),
+  \Dmemory(c, a) = 1 - \JS\!\left(\phi(\Pi^{a}_T),\, \phi(\Pi_T)\right),
   \label{eq:dmemory}
 \end{equation}
+where $\phi$ canonicalises a profile into the set of preference attributes it
+asserts. The canonicalisation is load-bearing, not cosmetic: $\Pi_t$ is free text
+produced by a generative stage, and set overlap taken over raw strings measures
+paraphrase variance in the profile writer rather than divergence in what was
+retained---two runs that keep the same preference in different words score as
+fully disjoint, and the measure is then non-zero even between two neutral runs
+under non-deterministic decoding. Applying $\phi$ first, and validating it by
+confirming that the neutral-versus-neutral delta is zero, is what makes this
+quantity a measurement rather than a noise estimate. It is
 reported together with the difference in dropped-preference rate, the fraction of
 stated preferences absent from the retained profile. This stage has no ground
 truth in the sense the earlier stages do---there is no correct memory---and is
@@ -527,26 +625,53 @@ The deltas above are defined per turn. Collecting them yields the three levels a
 which the framework reports. At the \emph{turn level}, the observation is the
 vector
 \begin{equation}
-  \delta_t = \left(\Dburden^{(t)}, \Devidence^{(t)}, \Dutility^{(t)},
-    \Dexposure^{(t)}, \Dtransparency^{(t)}, \Dmemory^{(t)}\right),
+  \delta_t = \left(\Dnorm_{\mathrm{burden}}^{(t)},
+    \Dnorm_{\mathrm{evidence}}^{(t)}, \Dnorm_{\mathrm{utility}}^{(t)},
+    \Dnorm_{\mathrm{exposure}}^{(t)}, \Dnorm_{\mathrm{transparency}}^{(t)},
+    \Dnorm_{\mathrm{memory}}^{(t)}\right) \in [0,1]^{6},
   \label{eq:deltavec}
 \end{equation}
-the profile of where the pipeline diverged at a single step.
+the profile of where the pipeline diverged at a single step. The vector carries six
+components for five stages because \stage{Rank} contributes two, and it is the
+\emph{normalised} deltas of Section~\ref{sec:stage-deltas} that enter it, not the
+signed ones. Normalisation is what makes the vector summable at all: the raw
+quantities are a turn count, three quantities on $[-1,1]$, and---before the
+rescaling of Equation~\eqref{eq:dexposure}---a difference of ordinal ranks whose
+range is the size of the catalog, so an unnormalised $\ell_1$ norm would be a
+report about exposure alone. At the turn level the burden component is the
+clarification-demand indicator difference $|\mathbb{1}[d^{a}_t = 1] -
+\mathbb{1}[d_t = 1]|$, the per-turn form of $\tilde{\beta}$.
 
 At the \emph{conversation level}, the observation is the ordered sequence $D_c =
 (\delta_1,\dots,\delta_{T_c})$, a stage-by-turn matrix. This is the object the
 stage-trajectory figure visualizes, and it distinguishes a transient divergence at
 one turn from a persistent one. To summarize it we define the cumulative
-divergence and, when $\Phi_1 > 0$, the compounding coefficient
+divergence and a compounding coefficient
 \begin{equation}
   \Phi_t = \sum_{t' \le t} \left\lVert \delta_{t'} \right\rVert_1,
   \qquad
-  \kappa_c = \frac{\Phi_{T_c}}{T_c \cdot \Phi_1}.
+  \kappa_c = \mathrm{KT}\!\left(\left\{\left(t,\,
+    \left\lVert \delta_{t} \right\rVert_1\right)\right\}_{t=1}^{T^{\wedge}_c}\right),
   \label{eq:compounding}
 \end{equation}
-Values $\kappa_c > 1$ indicate that per-turn divergence grew over the conversation
-rather than remaining at its initial level---the compounding effect that motivates
-a trajectory-level audit in the first place.
+where $\mathrm{KT}$ denotes the Kendall rank correlation between turn index and
+per-turn divergence (written out rather than as $\tau$, which this paper already
+uses for trajectories). Values $\kappa_c > 0$ indicate that per-turn divergence grew over the
+conversation rather than remaining at its initial level---the compounding effect
+that motivates a trajectory-level audit in the first place---and $\kappa_c$ is
+defined for every conversation with at least two turns.
+
+We use a trend statistic here in place of the ratio $\Phi_{T_c} / (T_c \Phi_1)$
+that suggests itself, for two reasons. That ratio reduces to the mean per-turn
+divergence expressed relative to the first turn's, so a single late spike raises it
+without any compounding having occurred; and it is undefined whenever
+$\lVert \delta_1 \rVert_1 = 0$, which in this corpus is the common case rather than
+the exception---real seeker conversations frequently open with a greeting that
+produces identical stage outputs under both conditions. Conditioning the statistic
+on $\Phi_1 > 0$ would restrict it to conversations selected for early divergence,
+which is the opposite of the population of interest. We instead report
+$\kappa_c$ over all conversations and give the fraction with
+$\lVert \delta_1 \rVert_1 = 0$ as a separate descriptive statistic.
 
 At the \emph{corpus level}, deltas are averaged per stage across conversations to
 give the aggregate profile of which stages are attribute-sensitive for a given
@@ -658,6 +783,21 @@ superseded. Each of these judgments is precisely what the rubric-based judge is
 introduced to supply, and we report the proxy and the judged score separately
 rather than merging them, since they measure different things.
 
+Three further caveats are properties of the measurement rather than of the agent,
+and are reported alongside the values so that they are not read as findings. The
+elicitation measures are right-censored by the replay length, as noted at
+Equation~\eqref{eq:dburden}: average turns and success rate within a budget are
+bounded by the number of seeker turns the source conversation supplies, and
+saturate when the agent does not self-terminate within it. The \stage{Retrieve}
+metrics are computed over the candidate list $C_T$, whose order is imposed by the
+catalog query rather than by estimated relevance; at small $K$ they therefore
+describe the composition of the pool rather than the quality of a ranking, and the
+ranked list $R_T$ is where a relevance-ordered reading of the same metrics belongs.
+And key-attribute coverage, computed by containment against free-form preference
+strings, is near-vacuous unless those strings are first canonicalised to catalog
+attributes; a coverage of zero on an explanation that visibly discusses the user's
+stated genres is a property of the proxy, not of the explanation.
+
 \subsubsection{LLM-as-Judge Stage Rubrics}
 \label{sec:judge}
 
@@ -689,17 +829,31 @@ never for the stage total, which is summed in code, since arithmetic is not the
 judgment under test. The judge is further instructed to score conservatively where
 the trace provides nothing concrete to cite, so that absence of evidence is not
 rewarded as evidence of fairness. Following ECPO's threshold-triggered flagging,
-any stage-turn scoring below the maximum is flagged for manual review; we report
-the flagged fraction alongside the mean, since a high mean with a heavy tail is a
-different finding from a uniformly moderate score.
+any stage-turn scoring at or below a threshold $\lambda$ is flagged for manual
+review; we report the flagged fraction alongside the mean, since a high mean with a
+heavy tail is a different finding from a uniformly moderate score. The threshold is
+stated rather than set at the maximum: with three anchored dimensions, flagging
+everything short of a perfect score flags nearly every stage-turn and the flagged
+fraction stops carrying information, which is why ECPO fixes $\lambda$ explicitly
+rather than flagging any deduction. For the same reason we report agreement at
+adjacent levels as well as at exact ones when the judge is compared against a human
+rater: on a small ordinal scale, exact-match rates understate a judge that is
+reliably within one level.
 
 \subsubsection{Group-Level Fairness Metrics}
 \label{sec:groupmetrics}
 
 To summarize disparity across the values of an attribute rather than within a
 single counterfactual pair, we adopt the two dispersion statistics introduced by
-CFaiRLLM, applied \emph{per stage}. Writing $\Simbar_s(a)$ for the mean invariance
-benefit of stage $s$ under attribute value $a$:
+FaiRLLM~\cite{fairllm} and carried forward by CFaiRLLM~\cite{cfairllm}, applied
+\emph{per stage}. Writing $\Simbar_s(a)$ for the mean invariance benefit of stage
+$s$ under attribute value $a$, that is
+\begin{equation}
+  \Simbar_s(a) = \frac{1}{N} \sum_{c} \left(1 - \Dnorm_s(c, a)\right),
+  \label{eq:simbar}
+\end{equation}
+the mean of the per-stage invariance benefit of Equation~\eqref{eq:binvnorm} over
+the $N$ audited conversations:
 \begin{align}
   \SNSR_s@K &= \max_{a \in \dom(A)} \Simbar_s(a)
              - \min_{a \in \dom(A)} \Simbar_s(a),
@@ -710,7 +864,20 @@ benefit of stage $s$ under attribute value $a$:
   \mu_s = \frac{1}{|\dom(A)|}\sum_{a' \in \dom(A)} \Simbar_s(a').
   \label{eq:snsv}
 \end{align}
-Higher values of either indicate greater unfairness. Computing both per stage,
+Higher values of either indicate greater unfairness. Two properties are worth
+stating, since both are easy to get wrong in an implementation. Because
+$\Simbar_s = 1 - \overline{\Dnorm}_s$ is an affine map with slope $-1$, a range and
+a standard deviation are identical whether computed over invariance benefits or
+over the divergences themselves; the choice of orientation therefore cannot change
+either statistic, only the sign convention used to describe it. And for a binary
+attribute the two statistics are not independent: the population standard deviation
+of two values is exactly half their range, so $\SNSV_s = \SNSR_s/2$ whenever
+$|\dom(A)| = 2$. We report both regardless, because $\SNSV$ becomes informative
+precisely where the attribute is multi-valued---age buckets, and the
+intersectional groups of Section~\ref{sec:groups}---and a range then reports only
+the extremes while a standard deviation reports the spread.
+
+Computing both per stage,
 rather than once for the system, yields a disparity profile across the pipeline:
 it identifies not merely that some groups are treated less similarly to the
 neutral baseline than others, but at which stage of the agent's reasoning that gap
