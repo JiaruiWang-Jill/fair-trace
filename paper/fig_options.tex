@@ -1,0 +1,103 @@
+%% ===========================================================================
+%% TEMPORARY PICKER BLOCK -- five candidate designs for the evaluation-structure figure.
+%%
+%% All five say the same thing: one request is replayed under two protected descriptors
+%% (man / woman), both arms run Elicit -> Retrieve -> Rank -> Explain -> Memory, and the
+%% pair is compared at every stage rather than only at the final recommendation. None of
+%% them shows the crossover, direct vs inherited dependence, or any measured value --
+%% that is the job of the method figure and the results tables.
+%%
+%% Each is drawn 1:1 at \linewidth, so none is being scaled down here.
+%%
+%% HOW TO USE: read the five, pick one, then delete this file's \input from the manuscript
+%% and move the chosen figure into place (Section 1 or 3) with a real caption and label.
+%% Sources: scripts/make_fig_eval_paired.py in the fair-trace repo (--only a|b|c|d|e).
+%% ===========================================================================
+
+\clearpage
+\section*{Figure options: the evaluation structure (pick one)}
+
+Five candidate designs for the figure that introduces the evaluation design. Same content in
+all five; they differ in what they put first and how much of the pipeline they show at once.
+One per page below.
+
+\begin{itemize}
+  \item \textbf{Option A --- two rails.} The two trajectories run as parallel rails with the
+    comparison drawn between them, one per stage. The most literal reading of the design, and
+    the easiest to follow with no prior context.
+  \item \textbf{Option B --- mirrored ladder.} The five stages down the middle, each arm's
+    output facing in from either side, sketched schematically so the reader can see at a glance
+    which stages agree and which diverge. Tallest of the five.
+  \item \textbf{Option C --- split screen.} The two arms as two columns of concrete outputs,
+    with the stage and a same/differs marker in the channel between them. Most concrete;
+    closest in spirit to CFaiRLLM's Figure 1.
+  \item \textbf{Option D --- fork into a shared pipeline.} Emphasises that the descriptor is
+    the only thing that changes and that both arms traverse the \emph{same} pipeline, with the
+    per-stage comparison drawn inside each stage.
+  \item \textbf{Option E --- across turns.} The only one that shows the multi-turn structure:
+    the five stages repeat every turn and each arm carries its own memory forward, so a
+    difference can persist, fade, or grow.
+\end{itemize}
+
+\noindent Option A is the safest default for the introduction; C is the strongest if the figure
+has to carry a concrete example on its own; E is the one to use if the multi-turn claim needs to
+land early.
+
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \includegraphics[width=\linewidth]{fig_paired_a_two_rails.pdf}
+  \caption{\textbf{Option A --- two rails.} One request, replayed under two protected
+    descriptors. Both arms run all five stages; the audit compares the corresponding stage
+    outputs, column by column.}
+  \Description{Two horizontal rows of five stage boxes, one row per protected condition, with a
+    labelled comparison between the corresponding boxes of the two rows.}
+\end{figure*}
+
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \includegraphics[width=\linewidth]{fig_paired_b_mirror_ladder.pdf}
+  \caption{\textbf{Option B --- mirrored ladder.} The five stages run down the centre; each
+    arm's output at that stage faces in from either side, sketched so that agreement and
+    divergence are visible without reading any numbers.}
+  \Description{A vertical ladder of five stages, with schematic depictions of each arm's output
+    to the left and right of each rung.}
+\end{figure*}
+
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \includegraphics[width=\linewidth]{fig_paired_c_split_screen.pdf}
+  \caption{\textbf{Option C --- split screen.} What the two arms actually produced, stage by
+    stage, with the stage name and a same-or-differs marker in the channel between the two
+    columns.}
+  \Description{Two columns of speech bubbles giving each arm's output at each of the five
+    stages, separated by a central column naming the stage and whether the two outputs agree.}
+\end{figure*}
+
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \includegraphics[width=\linewidth]{fig_paired_d_fork_converge.pdf}
+  \caption{\textbf{Option D --- fork into a shared pipeline.} The descriptor is the only thing
+    that changes; both arms then traverse the same pipeline, and each stage carries its own
+    comparison.}
+  \Description{A single request forking into two protected conditions, which then flow through
+    one row of five stage boxes, each box containing a lane per arm and a comparison between
+    them.}
+\end{figure*}
+
+\clearpage
+\begin{figure*}[p]
+  \centering
+  \includegraphics[width=\linewidth]{fig_paired_e_turn_loop.pdf}
+  \caption{\textbf{Option E --- across turns.} The five stages run again at every turn and each
+    arm carries its own memory forward, so the pair is compared five times per turn and a
+    difference can persist, fade, or grow over the conversation.}
+  \Description{Two stacked panels, one per conversational turn, each showing five stages with a
+    lane per arm and a comparison between them; a dashed arrow carries memory from the end of
+    the first turn to the start of the second.}
+\end{figure*}
+
+\clearpage
