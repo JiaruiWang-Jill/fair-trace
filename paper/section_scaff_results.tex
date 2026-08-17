@@ -1,0 +1,144 @@
+%% ===========================================================================
+%% Controlled-prototype results for the stage crossover.
+%% Inserted as the first subsection of Section~\ref{sec:results}.
+%%
+%% DUPLICATION NOTE. paper/results_controlled.tex reports the same measurements against the
+%% notation and equation labels of the Overleaf project's main_yd.tex (Yashar's rewrite:
+%% \Dist_s, eq:direct/eq:state/eq:violation/eq:repair, RQ1--RQ4). This file is the counterpart
+%% for the main.tex lineage that fair_trace_acm.tex belongs to. The two must be kept in sync
+%% until one lineage wins; if main_yd.tex becomes the manuscript, delete this file and the
+%% \input of it in fair_trace_acm.tex.
+%%
+%% All numbers are from the two-domain controlled prototype, seed 42, 24 scenarios x 4 repeats
+%% per domain, no LLM judge. Reproduced from a local re-execution of the reference notebook,
+%% which matched its recorded outputs exactly.
+%% ===========================================================================
+
+\subsection{Validating the Crossover on a Controlled Substrate}
+\label{sec:scaff-results}
+
+Before applying the decomposition of Section~\ref{sec:scaff} to an agent whose behaviour is
+unknown, we validate that it recovers a dependence whose location we control. We construct two
+controlled domains---movie and restaurant recommendation---in which the latent user profile,
+the set of acceptable actions, item relevance, and memory support are all known by construction,
+and in which a stage-specific attribute dependence is \emph{planted} at a known stage. The
+planted dependence is an artificial unit test of the measurement instrument and carries no claim
+about the preferences or treatment of any real group. Each domain contributes $24$ scenarios run
+at $4$ repeats; every stage output is checked by a structural validity gate before any fairness
+quantity is computed, so that an invalid pair is excluded rather than scored. Under this design a
+stage sees the descriptor only when it is that scenario's planted stage, which means the causal
+origin of every divergence is known and the decomposition has a ground truth to be judged
+against.
+
+Table~\ref{tab:scaff-coords} reports the mean per-stage coordinates. The pattern that motivates
+the framework appears immediately at \stage{Rank}: it carries the largest natural divergence in
+both domains ($0.396$ and $0.490$), and most of that divergence is inherited ($0.302$, $0.333$)
+rather than direct ($0.094$, $0.156$). An audit reading $\Dnat_s$ alone would direct remediation
+effort at the ranker. \stage{Retrieve} shows the opposite composition---direct exceeding
+inherited in both domains---and is where the decomposition assigns responsibility.
+
+\begin{table}[t]
+  \caption{Mean per-stage coordinates on the controlled prototype ($24$ scenarios $\times\, 4$
+    repeats per domain). \emph{noise} is the within-condition repeat distance and bounds what a
+    direct effect must exceed to be interpretable. Diagnoses are the corpus-mean reading at
+    $\tau = 0.10$ and summarize a distribution rather than delivering a per-conversation verdict.}
+  \label{tab:scaff-coords}
+  \begin{tabular}{llrrrrl}
+    \toprule
+    Domain & Stage & $\Dnat_s$ & $\DA_s$ & $\DZ_s$ & noise & diagnosis \\
+    \midrule
+    Movies      & \stage{Elicit}   & 0.056 & 0.056 & 0.000 & 0.000 & invariant \\
+                & \stage{Retrieve} & 0.205 & 0.136 & 0.069 & 0.166 & direct \\
+                & \stage{Rank}     & 0.396 & 0.094 & 0.302 & 0.328 & inherited \\
+                & \stage{Explain}  & 0.225 & 0.067 & 0.158 & 0.008 & inherited \\
+                & \stage{Memory}   & 0.156 & 0.056 & 0.101 & 0.000 & inherited \\
+    \midrule
+    Restaurants & \stage{Elicit}   & 0.056 & 0.056 & 0.000 & 0.000 & invariant \\
+                & \stage{Retrieve} & 0.220 & 0.146 & 0.074 & 0.120 & direct \\
+                & \stage{Rank}     & 0.490 & 0.156 & 0.333 & 0.370 & mixed \\
+                & \stage{Explain}  & 0.197 & 0.072 & 0.125 & 0.014 & inherited \\
+                & \stage{Memory}   & 0.160 & 0.056 & 0.104 & 0.004 & inherited \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsubsection{Localization}
+\label{sec:scaff-localization}
+
+Selecting, per scenario, the stage with the largest $\DA_s$---and \emph{none} when no stage
+exceeds $\tau$---recovers the planted stage in all $48$ scenarios across the two domains,
+including the control scenarios in which nothing was planted. This is the sanity check that has
+to pass before the decomposition is applied to a real agent, where the causal origin is not
+known.
+
+Two qualifications keep the number honest. First, accuracy is reported at a single planted effect
+size, and the planted faults here are strong enough to change the primary coordinate
+substantially; localization in the weak-effect regime---the regime a deployed audit operates
+in---is characterised by accuracy as a function of effect size, not by a single percentage, and we
+report it that way in Section~\ref{sec:results}. Second, localization inherits the sensitivity of
+whichever coordinate a stage uses. The top-one gap we adopt for \stage{Rank} is a binary
+coordinate, and its noise floor in Table~\ref{tab:scaff-coords} ($0.328$, $0.370$) exceeds its own
+direct effect: it is simultaneously noisy under repetition and insensitive to a genuine
+reordering that leaves the head of the list intact. A graded coordinate---rank correlation, or a
+difference in $\NDCG@K$---is the better choice for that stage, and the composition of
+Table~\ref{tab:scaff-coords} at \stage{Rank} should be read with that limitation in view.
+
+\subsubsection{Process Sensitivity Masked at the Endpoint}
+\label{sec:scaff-masking}
+
+Table~\ref{tab:scaff-masking} cross-tabulates whether a pair is process-sensitive---some stage
+with $\DA_s > \tau$---against whether its final ranked list differs beyond the endpoint
+equivalence margin. Of the $151$ process-sensitive pairs, $77$ are endpoint-equivalent: for just
+over half of the trajectories in which some stage responded directly to the descriptor, the final
+recommendation is indistinguishable. These are exactly the cases an output-level consumer-fairness
+audit records as fair, and they are the empirical argument for auditing the process. Aggregated
+per domain, $36.5\%$ (movies) and $43.8\%$ (restaurants) of all pairs are masked in this sense.
+
+\begin{table}[t]
+  \caption{Process sensitivity against endpoint difference, pooled across domains. The $77$ pairs
+    in the upper right are process-sensitive trajectories that an output-only audit scores as
+    fair.}
+  \label{tab:scaff-masking}
+  \begin{tabular}{lrr}
+    \toprule
+     & endpoint differs & endpoint equivalent \\
+    \midrule
+    process sensitive        & 74 & 77 \\
+    no direct sensitivity    &  0 & 41 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Part of this masking is structural rather than incidental, and the distinction matters for how
+strongly the result can be stated. \stage{Explain} and \stage{Memory} both act downstream of the
+ranked list, so a fault planted at either cannot alter the endpoint within a turn under any
+parameterisation. For those stages an endpoint audit is not underpowered but blind by
+construction; a \stage{Memory} fault becomes observable only once a later turn consumes the
+corrupted profile. The empty lower-left cell is a soundness property of this substrate---a planted
+fault is the only route by which the two arms can differ---and not a general guarantee. Under a
+stochastic agent that cell will be populated, and it should be reported rather than assumed empty.
+
+\subsubsection{Repair Removability}
+\label{sec:scaff-repair}
+
+Replacing the implicated stage's output with its valid counterpart and re-running all descendants
+reduces the final ranking divergence by $0.576$ (movies) and $0.588$ (restaurants). The same
+operation applied at a stage the crossover exonerates reduces it by $0.170$ and $0.187$. The
+attribution therefore predicts the effect of acting on it, which a coordinate that merely
+described the divergence would not.
+
+The constraint noted in Section~\ref{sec:scaff} is visible in these results and is why we state
+it: a repair at \stage{Rank} scores a removability exactly equal to its own pre-repair divergence
+in both domains, because substituting the ranked list is substituting the quantity the outcome
+metric is computed on. That figure measures the metric's definition rather than the repair's
+effect, and removability for \stage{Rank} is accordingly evaluated on the following turn.
+
+\subsubsection{Validity}
+\label{sec:scaff-validity}
+
+The validity gate rejected $2.1\%$ of \stage{Explain} outputs in both domains---all of them a
+mismatch between the item named in the explanation and the top-ranked item, and all concentrated
+on one scenario per domain. These runs are excluded from \stage{Explain}'s fairness coordinates
+rather than scored, and the rejection rate is reported alongside them: a stage that frequently
+emits structurally invalid output is a finding in its own right, and silently averaging over such
+runs would report it as invariance.

@@ -43,6 +43,10 @@
 \newcommand{\Dtransparency}{\Delta_{\mathrm{transparency}}}
 \newcommand{\Dmemory}{\Delta_{\mathrm{memory}}}
 \newcommand{\Dnorm}{\widetilde{\Delta}}
+%% Stage-crossover coordinates (Section~\ref{sec:scaff}).
+\newcommand{\Dnat}{D^{\mathrm{nat}}}
+\newcommand{\DA}{D^{A}}
+\newcommand{\DZ}{D^{Z}}
 \newcommand{\Binv}{B^{s}_{\mathrm{inv}}}
 \newcommand{\Bqual}{B^{s}_{\mathrm{qual}}}
 \newcommand{\JS}{\mathrm{JS}}
@@ -85,16 +89,28 @@
   process. We introduce FAIR-TRACE, a stage-wise fairness-measurement framework
   that audits the trajectory instead of the call. FAIR-TRACE decomposes an
   agentic pipeline into five stages---\stage{Elicit}, \stage{Retrieve},
-  \stage{Rank}, \stage{Explain}, \stage{Memory}---and defines a counterfactual
-  fairness delta at each, so that a disparity can be attributed to the stage
-  that introduced it and traced as it propagates across turns. We generalize the
-  item-similarity and true-preference-alignment benefits of prior work into a
-  per-stage invariance benefit and quality benefit, define three levels of
-  aggregation (turn, conversation, corpus) together with a compounding
-  coefficient, and pair closed-form metrics with a rubric-based LLM-as-judge
-  protocol for the stages that admit no ground truth. We instantiate the
-  framework on a preference-elicitation agent over real ReDial conversations
-  joined with MovieLens metadata.
+  \stage{Rank}, \stage{Explain}, \stage{Memory}---and asks not merely whether
+  each stage's output differs across a protected-attribute intervention, but
+  \emph{where the dependence entered}. Because each stage consumes its
+  predecessor's output, a stage that never inspects the attribute still diverges
+  once its inherited state has been changed upstream, so a comparison of
+  per-stage outputs implicates every stage downstream of a violation alongside
+  the one that caused it. We therefore hold a stage's legitimate parent state
+  fixed and intervene only on the model-visible descriptor, which separates
+  direct sensitivity from inherited dependence and distinguishes both from the
+  further claims of procedural unfairness and disparate harm---the last of which
+  alone requires a reference against which one output is better than another.
+  Detecting stage-level sensitivity requires no labelled intermediate data;
+  quantifying harm does, and where no defensible reference exists we report harm
+  as not identified rather than manufacture ground truth. On a controlled
+  two-domain substrate with a dependence planted at a known stage, the
+  decomposition recovers that stage in all 48 scenarios, finds that just over
+  half of process-sensitive trajectories are endpoint-equivalent and therefore
+  invisible to an output-only audit, and predicts repair: overwriting the
+  implicated stage and re-running its descendants removes 0.58 of the downstream
+  disparity against 0.17 for a stage the decomposition exonerates. We also
+  instantiate the framework on a preference-elicitation agent over real ReDial
+  conversations joined with MovieLens metadata.
 \end{abstract}
 
 %% CCS concepts — replace with the codes from the ACM CCS tool before submission.
@@ -158,6 +174,26 @@ the stated reasons remain faithful to the agent's actual reasoning, regardless o
 $A$?), and $\Dmemory$ (do disparities compound across turns as the agent's memory
 updates?).
 
+Measuring these quantities stage by stage is necessary but not sufficient,
+because a per-stage difference is not a per-stage cause. The stages form a chain:
+each consumes the output of its predecessor, so a stage that never inspects $A$
+will still produce a different output once the state it inherits has been changed
+upstream. Suppose \stage{Elicit} infers a preference the user never expressed for
+one value of $A$. \stage{Retrieve}, \stage{Rank}, \stage{Explain} and
+\stage{Memory} then all diverge---and a stage-wise comparison of outputs reports
+five attribute-sensitive stages where there is one faulty stage and four faithful
+ones. An operator reading that report has no basis for choosing what to fix.
+FAIR-TRACE therefore intervenes on a stage's two inputs separately: holding its
+legitimate parent state fixed at what each arm actually reached and swapping only
+the model-visible descriptor isolates the stage's own sensitivity, while holding
+the descriptor fixed and swapping the parent state isolates what it inherited
+(Section~\ref{sec:scaff}). The first quantity attributes a violation to a
+location; the second explains a disparity without misattributing it. Keeping them
+apart also keeps apart three claims of increasing strength---that a stage
+responds to the attribute, that this response is prohibited, and that someone was
+made worse off---of which only the last requires a reference against which one
+output can be called better than another.
+
 We instantiate this framework on a concrete agent: a preference-elicitation agent
 built on real ReDial conversations~\cite{li2018redial} joined against MovieLens
 item metadata~\cite{harper2015movielens}, replaying full multi-turn dialogues
@@ -178,17 +214,27 @@ LLM, retriever, or domain used to instantiate it.
 
 \paragraph{Contributions}
 \begin{itemize}
-  \item A stage-wise counterfactual audit framework for agentic LLM
-    recommendation pipelines, defining a per-stage fairness delta that
-    \emph{localizes} where fairness violations are introduced across a
-    multi-turn trajectory rather than only at the final output.
+  \item A stage-crossover attribution layer for agentic LLM recommendation
+    pipelines (Section~\ref{sec:scaff}) that \emph{distinguishes} a stage's own
+    response to a protected descriptor from its faithful consumption of an
+    already-corrupted upstream state, rather than reporting both as
+    attribute sensitivity. The construction separates three claims the
+    literature routinely merges---direct sensitivity, procedural unfairness, and
+    disparate harm---and identifies which of them requires ground truth.
+  \item A validation of that decomposition against a known cause: on a
+    controlled two-domain substrate with a dependence planted at a known stage,
+    the coordinate recovers the planted stage in all 48 scenarios, and repairing
+    the stage it implicates removes substantially more downstream disparity than
+    repairing a stage it exonerates (Section~\ref{sec:scaff-results}).
+  \item Evidence that endpoint auditing cannot substitute for this, both
+    empirically---just over half of process-sensitive trajectories are
+    endpoint-equivalent---and structurally, since \stage{Explain} and
+    \stage{Memory} faults cannot alter a ranked list within a turn at all.
   \item A concrete instantiation on a preference-elicitation agent over real
     ReDial conversations joined with MovieLens metadata, including per-stage
-    automatic metrics and a rubric-based LLM-as-judge protocol grounded in
-    established fairness formulas from the recommender-systems literature.
-  \item A stage-trajectory analysis showing how per-stage disparities do or do
-    not compound across turns, and where a sensitive ranker diverges from the
-    neutral ranker.
+    automatic metrics, which supply the distance functions the crossover is
+    evaluated with, and a rubric-based LLM-as-judge protocol scoped to the
+    semantic judgments no closed form supplies.
 \end{itemize}
 
 \paragraph{Outline}
@@ -430,6 +476,12 @@ with the residual $|T^{a}_c - T_c|$ carried by the burden delta alone rather tha
 folded into the other deltas; a quantity written at $T$ below denotes its value at
 $t = T^{\wedge}_c$. Without this convention a non-zero burden delta would silently
 misalign every other delta on exactly the conversations where it fires.
+
+%% The crossover layer: what is held fixed when each coordinate is measured, and why a
+%% per-stage difference is not a per-stage cause. Artwork by scripts/make_fig_scaff.py.
+\input{section_scaff.tex}
+
+\input{figures/fig_scaff.tex}
 
 \subsubsection{Invariance and Quality Benefits}
 \label{sec:benefits}
@@ -975,8 +1027,11 @@ with results averaged over the full curated conversation set.
 \section{Results}
 \label{sec:results}
 
-%% TODO: stage-wise metric tables averaged over the curated conversation set,
-%% LLM-as-judge score summary, and the stage-trajectory figure.
+\input{section_scaff_results.tex}
+
+%% TODO: stage-wise metric tables averaged over the curated ReDial conversation set,
+%% LLM-as-judge score summary, the stage-trajectory figure, and localization accuracy as a
+%% function of planted effect size (Section~\ref{sec:scaff-localization}).
 
 %% ===========================================================================
 \section{Discussion}

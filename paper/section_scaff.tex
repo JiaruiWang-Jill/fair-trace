@@ -1,0 +1,155 @@
+%% ===========================================================================
+%% SCAFF: the stage-crossover attribution layer.
+%%
+%% Inserted into Section~\ref{sec:deltas} immediately AFTER \subsubsection{Neutral and
+%% Sensitive Trajectories} and BEFORE \subsubsection{Invariance and Quality Benefits}, so that
+%% the per-stage deltas that follow read as choices of the distance function $d_s$ rather than
+%% as the framework's primitive.
+%%
+%% Requires in the preamble:
+%%   \newcommand{\Dnat}{D^{\mathrm{nat}}}
+%%   \newcommand{\DA}{D^{A}}
+%%   \newcommand{\DZ}{D^{Z}}
+%% ===========================================================================
+
+\subsubsection{Stage Crossover: Separating Direct Sensitivity from Inherited Dependence}
+\label{sec:scaff}
+
+Comparing $O_s(\tau^{a}_c)$ against $O_s(\tau_c)$ at every stage localizes \emph{where a
+trajectory diverges}. It does not localize \emph{where the protected attribute entered}, and in a
+stateful pipeline those are different questions. Each stage consumes the output of its
+predecessor, so a stage that never inspects the attribute still produces a different output once
+the state it inherits has been changed upstream. A stage-wise comparison of outputs therefore
+reports every stage downstream of a violation as attribute-sensitive, and the resulting diagnosis
+implicates the stages that merely transmitted the difference alongside the one that created it.
+The distinction is not academic: it determines which component an operator should repair.
+
+We resolve this by intervening on the two inputs of a stage separately. Fix a stage $s$ and write
+$Z_s$ for its \emph{legitimate parent state}---the complete non-protected input it receives from
+upstream, which for the substrate of Section~\ref{sec:substrate} is the accumulated preference
+state at \stage{Retrieve}, that state together with the candidate list at \stage{Rank}, and so on.
+By construction $Z_s$ never contains the attribute. Let $Z^{a}_s$ and $Z^{a'}_s$ denote the parent
+states that the two protected conditions \emph{naturally} reach, and let $f_s$ be the stage's
+transition with $\phi_s$ its audited projection. Define the crossover outcome
+\begin{equation}
+  Y^{i,j}_s = \phi_s\!\left(f_s(Z^{i}_s,\, A = j;\, \epsilon)\right),
+  \qquad i, j \in \{a, a'\},
+  \label{eq:crossover}
+\end{equation}
+in which the first index selects \emph{whose inherited state} the stage is supplied and the second
+selects \emph{which descriptor the stage itself is shown}. The four cells of
+Equation~\eqref{eq:crossover} are the $2 \times 2$ design of this framework: the two diagonal
+cells are the naturally evolving trajectories, and the two off-diagonal cells are counterfactuals
+that no end-to-end replay produces, because they require a stage to be re-executed on an input its
+own arm never reached.
+
+Three quantities follow, all expressed through the same stage-specific distance $d_s$. Natural
+divergence,
+\begin{equation}
+  \Dnat_s(c, a) = d_s\!\left(Y^{a,a}_s,\, Y^{a',a'}_s\right),
+  \label{eq:dnat}
+\end{equation}
+is the diagonal contrast, and is exactly what a stage-wise comparison of paired trajectories
+measures. Direct sensitivity holds the parent state fixed and swaps only the descriptor,
+\begin{equation}
+  \DA_s(c, a) = \tfrac{1}{2}\left[
+    d_s\!\left(Y^{a,a}_s,\, Y^{a,a'}_s\right) +
+    d_s\!\left(Y^{a',a}_s,\, Y^{a',a'}_s\right)\right],
+  \label{eq:ddirect}
+\end{equation}
+averaging over the two parent states so that the estimate does not depend on which arm is treated
+as the reference. Inherited dependence holds the descriptor fixed and swaps the parent state,
+\begin{equation}
+  \DZ_s(c, a) = \tfrac{1}{2}\left[
+    d_s\!\left(Y^{a,a}_s,\, Y^{a',a}_s\right) +
+    d_s\!\left(Y^{a,a'}_s,\, Y^{a',a'}_s\right)\right].
+  \label{eq:dinherited}
+\end{equation}
+
+The interpretation of each is fixed by what it holds constant. A non-zero $\DA_s$ can only arise
+from the stage's own response to the descriptor, since nothing else about its input changed; this
+is the quantity that attributes a violation to a location. A non-zero $\DZ_s$ arises when the
+stage responds to a difference in what it was given, which is what a correctly functioning stage
+is supposed to do---the disparity is real and user-visible, but the stage is not where it should be
+corrected. $\Dnat_s$ confounds the two, and Equations~\eqref{eq:ddirect}
+and~\eqref{eq:dinherited} are how it is decomposed. Under a deterministic stage the three are
+related by the triangle inequality rather than additively, so we report them as three coordinates
+and do not combine them into a scalar.
+
+We also report a fourth coordinate, the within-condition distance obtained by repeating a single
+arm under identical inputs, which estimates the noise floor $\epsilon$ contributes. This is not
+decoration: a stage whose $\DA_s$ is smaller than its own repeat variance has not been shown to be
+attribute-sensitive at all, and a decision rule applied without it converts decoding
+stochasticity into findings.
+
+\paragraph{Reading the coordinates}
+Fixing a margin $\tau$ above the noise floor, each stage is assigned one of four diagnoses:
+\emph{direct} when $\DA_s > \tau$; \emph{inherited} when $\DA_s \leq \tau$ while $\Dnat_s$ and
+$\DZ_s$ both exceed $\tau$; \emph{mixed} when $\DA_s$ and $\DZ_s$ both exceed $\tau$, the case in
+which a stage both reads the attribute and receives an already-corrupted state; and
+\emph{invariant} otherwise. The diagnosis is defined per conversation and attribute value. A
+corpus mean over these coordinates is a summary of a distribution and is not itself a verdict:
+a stage that is directly sensitive on a minority of conversations will average below any useful
+margin, which is why Section~\ref{sec:scaff-results} reports the distribution of per-conversation
+diagnoses alongside the means.
+
+\paragraph{Three claims, separated}
+Equations~\eqref{eq:ddirect} and~\eqref{eq:dinherited} let us keep apart three assertions that
+the fairness literature routinely merges, and that carry different evidential burdens.
+\emph{Direct sensitivity} is an empirical claim about a stage's transition function, established
+by $\DA_s$ and requiring no ground truth. \emph{Procedural unfairness} is the further claim that
+this particular dependence is prohibited for this particular stage---a normative premise supplied
+by the auditor, not measured. It is stated per stage because it varies per stage: a descriptor may
+be a legitimate input to a safety filter and an illegitimate one to preference inference.
+\emph{Disparate harm} is the strongest claim, that the affected party is worse off, and it alone
+requires a reference $\Omega_s$ against which one output can be called better than the other:
+whether an additional clarification was informative, whether a candidate set had lower recall,
+whether a ranking had lower $\NDCG@K$, whether a retained memory fact was supported.
+
+This ordering has a consequence for what an audit may report. Where a defensible $\Omega_s$
+exists, all three claims can be made. Where none does, sensitivity and procedural status remain
+reportable and harm must be recorded as \emph{not identified}. We take that as the correct output
+rather than a gap to be filled by an LLM judge: a judge asked to adjudicate whether one clarifying
+question was more useful than another, absent any reference, produces a number with no
+truth-conditions attached. The judge protocol of Section~\ref{sec:judge} is accordingly scoped to
+semantic constructs for which agreement rather than correctness is the property of interest---
+whether two clarifying questions target the same facet, whether an explanation asserts something
+the trace does not support, whether framing is stereotypical---and deterministic checks and task
+ground truth take precedence wherever both are available.
+
+\paragraph{Relation to the per-stage deltas}
+The deltas of Section~\ref{sec:stage-deltas} are not superseded. Each supplies the distance $d_s$
+for its stage---clarification-demand difference at \stage{Elicit}, Jaccard divergence of the
+candidate pool at \stage{Retrieve}, a ranking contrast at \stage{Rank}, coverage and leakage at
+\stage{Explain}, profile divergence at \stage{Memory}---and each is evaluated at all four cells of
+Equation~\eqref{eq:crossover} rather than at the diagonal alone. The framework's earlier
+formulation is thus the special case in which only $\Dnat_s$ is computed, and the group statistics
+of Section~\ref{sec:groupmetrics} apply unchanged to whichever coordinate is being aggregated,
+provided the coordinate is named: $\SNSR_s$ computed on $\Dnat_s$ and on $\DA_s$ answer different
+questions, and reporting one under the other's name is the specific error this section exists to
+prevent.
+
+\paragraph{Repair as a test of the attribution}
+An attribution claim should predict the effect of acting on it, and this one does. Replace the
+implicated stage's output on one arm with the corresponding output from the other, re-run every
+descendant stage on the patched state, and measure the resulting change in the final endpoint
+divergence. We call the reduction \emph{removability}. If $\DA_s$ has identified the origin, then
+repairing at $s$ should remove the downstream disparity while repairing at a stage the crossover
+exonerates should not, and the gap between those two numbers is a direct test of the decomposition
+rather than a restatement of it. One constraint on the experiment is worth stating because
+violating it produces a spurious success: removability must not be measured on the output of the
+stage being repaired, since substituting that output sets the measured divergence to zero
+irrespective of where the fault originated. Removability is therefore evaluated strictly
+downstream of the repaired stage, which for a repair at \stage{Rank} in a single-turn setting
+means at the following turn.
+
+\paragraph{Why endpoint auditing cannot substitute}
+Two consequences of the decomposition explain why an output-only audit is not a cheaper
+approximation of this one. First, empirically, a trajectory can be process-sensitive while its
+final ranked list stays within any reasonable equivalence margin, because the effect of an
+upstream difference need not survive ranking and truncation; those cases are recorded as fair by
+an endpoint audit. Second, and structurally, faults at \stage{Explain} and \stage{Memory} lie
+downstream of the ranked list and therefore \emph{cannot} change it within a turn at all. For
+those two stages an endpoint audit is not underpowered but blind by construction, and the
+persistence of a \stage{Memory} fault only becomes observable on a subsequent turn---which is why
+the multi-turn substrate of Section~\ref{sec:substrate} is load-bearing rather than incidental.
