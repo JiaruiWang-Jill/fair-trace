@@ -9,7 +9,12 @@
 %% until one lineage wins; if main_yd.tex becomes the manuscript, delete this file and the
 %% \input of it in fair_trace_acm.tex.
 %%
-%% All numbers are from the two-domain controlled prototype, seed 42, 24 scenarios x 4 repeats
+%% Section~\ref{sec:scaff-robustness} is the exception: it is an independent re-implementation
+%% (scripts/scaff_robustness.py + scripts/run_scaff_robustness.py, narrated in
+%% 0819_FAIR-TRACE_SCAFF_localization_robustness.ipynb), and its numbers come from
+%% paper/scaff_robustness_results.json. Different substrate -- do not merge into Table 1.
+%%
+%% All other numbers are from the two-domain controlled prototype, seed 42, 24 scenarios x 4 repeats
 %% per domain, no LLM judge. Reproduced from a local re-execution of the reference notebook,
 %% which matched its recorded outputs exactly.
 %% ===========================================================================
@@ -79,9 +84,10 @@ report it that way in Section~\ref{sec:results}. Second, localization inherits t
 whichever coordinate a stage uses. The top-one gap we adopt for \stage{Rank} is a binary
 coordinate, and its noise floor in Table~\ref{tab:scaff-coords} ($0.328$, $0.370$) exceeds its own
 direct effect: it is simultaneously noisy under repetition and insensitive to a genuine
-reordering that leaves the head of the list intact. A graded coordinate---rank correlation, or a
-difference in $\NDCG@K$---is the better choice for that stage, and the composition of
-Table~\ref{tab:scaff-coords} at \stage{Rank} should be read with that limitation in view.
+reordering that leaves the head of the list intact.
+Section~\ref{sec:scaff-robustness} settles both points on an independent re-implementation, and
+also supplies the interval this figure lacks: $100\%$ becomes $[0.969, 1.000]$ (Wilson, $n = 120$)
+with a range of $0.958$--$1.000$ across five seeds.
 
 \subsubsection{Process Sensitivity Masked at the Endpoint}
 \label{sec:scaff-masking}
@@ -114,7 +120,9 @@ strongly the result can be stated. \stage{Explain} and \stage{Memory} both act d
 ranked list, so a fault planted at either cannot alter the endpoint within a turn under any
 parameterisation. For those stages an endpoint audit is not underpowered but blind by
 construction; a \stage{Memory} fault becomes observable only once a later turn consumes the
-corrupted profile. The empty lower-left cell is a soundness property of this substrate---a planted
+corrupted profile. Because the two halves are claims of different strength, the pooled rate above
+understates one and overstates the other, and Section~\ref{sec:scaff-robustness} reports them
+apart. The empty lower-left cell is a soundness property of this substrate---a planted
 fault is the only route by which the two arms can differ---and not a general guarantee. Under a
 stochastic agent that cell will be populated, and it should be reported rather than assumed empty.
 
@@ -131,7 +139,62 @@ The constraint noted in Section~\ref{sec:scaff} is visible in these results and 
 it: a repair at \stage{Rank} scores a removability exactly equal to its own pre-repair divergence
 in both domains, because substituting the ranked list is substituting the quantity the outcome
 metric is computed on. That figure measures the metric's definition rather than the repair's
-effect, and removability for \stage{Rank} is accordingly evaluated on the following turn.
+effect, and removability for \stage{Rank} is accordingly evaluated on the following turn. The
+confound reaches further than the \stage{Rank} cell: scored on the ranking, a repair at
+\stage{Retrieve} removes $0.939$ of an \stage{Elicit}-planted divergence despite \stage{Retrieve}
+being faithful, so the two numbers above are superseded by
+Section~\ref{sec:scaff-robustness}.
+
+\subsubsection{Robustness of the Instrument}
+\label{sec:scaff-robustness}
+
+Four properties of the run above are load-bearing and none was established: the choice of
+\stage{Rank}'s coordinate, the decision margin, the precision of the localization figure, and the
+scoring of the repair. We establish them on an independent re-implementation of the measurement
+(one domain, transparent stage functions, $120$ scenarios at $8$ repeats, five seeds),
+parameterised into the same regime rather than reproducing the prototype exactly; re-execution is
+byte-identical and every number is emitted to a machine-readable results file.
+
+\paragraph{Shared exogenous noise}
+The crossover cell carries a single $\epsilon$ common to all four cells. Since $\DA_s$ is a
+difference between cells, letting each draw its own randomness makes that difference a mixture of
+effect and sampling noise, and $\DA_s$ then inherits the stage's whole noise floor---which is
+exactly the signature of a $0.328$ noise coordinate beside a $0.094$ direct effect. On identical
+trajectories, \stage{Rank}'s coordinates move from $(0.376, 0.104, 0.272)$ with $\epsilon$ shared
+to $(0.850, 0.762, 0.788)$ with independent draws, and localization falls from $100\%$ to between
+$16.7\%$ and $82.5\%$. This is the highest-leverage correction available and it costs nothing.
+
+\paragraph{Coordinate and margin}
+Where the agent's sampling cannot be controlled, the coordinate decides whether the audit works.
+Separating \stage{Rank}-planted scenarios from all others by $\DA_s$, the top-one gap reaches an
+AUC of $0.566$ against $0.804$ for $\Delta\NDCG@5$, with top-3 Jaccard, Kendall $\tau$ and RBO in
+between ($0.684$, $0.680$, $0.659$); end-to-end localization is $16.7\%$ and $82.5\%$ at the two
+extremes. We adopt $\Delta\NDCG@K$ where $\Omega_s$ is defensible and RBO where it is not.
+The margin is likewise derived rather than chosen: the control scenarios exhibit only instrument
+noise, and with $\epsilon$ shared that noise is exactly zero, giving $\tau^\star = 0$. The
+inherited $\tau = 0.10$ silently assumed a coordinate scale---$\Delta\NDCG@5$ effects live near
+$0.04$---so at that margin every \stage{Rank} plant is missed and accuracy caps at $83.3\%$ on all
+five seeds.
+
+\paragraph{Repair}
+Scored the original way, the entire \stage{Rank} column of the planted-by-repaired matrix reads
+$1.0$: repairing the ranker reports complete removal for a fault planted anywhere upstream.
+Scoring strictly downstream of the repaired stage gives a diagonal of $1.0$ with a largest
+off-diagonal entry of $0.20$. The cost is that removability becomes \emph{not identified} for
+\stage{Rank}, \stage{Explain} and \stage{Memory} faults in a single turn---neither \stage{Explain}'s
+nor \stage{Memory}'s coordinate reads the ranked list, so a reordering leaves no downstream
+footprint---and we report it as such rather than filling it in, on the same principle that governs
+harm without a defensible $\Omega_s$.
+
+\paragraph{Blindness against power}
+Splitting the masking table by whether the endpoint could move: of the $80$ pairs planted at
+\stage{Elicit}, \stage{Retrieve} or \stage{Rank}, $5.0\%$ are process-sensitive yet
+endpoint-equivalent. The $40$ pairs planted at \stage{Explain} or \stage{Memory} are all
+process-sensitive, all endpoint-equivalent, and have a maximum endpoint distance of exactly $0.0$.
+The second is not a masking rate but the structural claim, verified. Adding a follow-up turn---
+with the agent's stored facts and reason tags echoed into the next turn's revealed
+preferences---lets every planted stage move the endpoint, \stage{Explain} at $0.408$ and
+\stage{Memory} at $0.163$, while controls stay at exactly $0.000$.
 
 \subsubsection{Validity}
 \label{sec:scaff-validity}
