@@ -143,6 +143,38 @@ irrespective of where the fault originated. Removability is therefore evaluated 
 downstream of the repaired stage, which for a repair at \stage{Rank} in a single-turn setting
 means at the following turn.
 
+\paragraph{What the crossover requires of an implementation}
+Equation~\eqref{eq:crossover} is a statement about four runs of the same stage, and it imposes
+three requirements that are easy to state and easy to lose. The parent state $Z_s$ must be
+\emph{addressable}: a stage's inputs have to be a nameable object, because one cannot hold fixed
+what one cannot name. It must be \emph{holdable and replayable}: a single stage must be
+re-runnable in isolation on a substituted parent state, and its descendants re-runnable after it,
+or neither the crossover nor the repair test of the preceding paragraph can be carried out. And it
+must be \emph{provable} that a stage did not observe the descriptor, since the whole content of
+$\DA_s = 0$ is the claim that the stage's response to $A$ is null rather than merely unmeasured.
+
+A fourth requirement is less obvious and more consequential. The four cells share a single
+exogenous draw $\epsilon$. Because $\DA_s$ is a \emph{difference} between two cells, an
+implementation that lets each cell sample independently makes that difference a mixture of the
+effect and the sampling noise, and $\DA_s$ silently inherits the stage's entire noise floor rather
+than estimating a causal quantity. This is not a fine point of implementation hygiene: on our
+controlled substrate the identical trajectories yield a \stage{Rank} triple of
+$(\Dnat_s, \DA_s, \DZ_s) = (0.376, 0.104, 0.272)$ under a shared draw and $(0.850, 0.762, 0.788)$
+under independent draws, where the three coordinates are no longer distinguishable from one
+another or from the noise floor, and localization accuracy falls from $100\%$ to as little as
+$16.7\%$. Where a stage is realised by a sampling model whose randomness cannot be pinned, the
+draw must be shared by other means---caching completions keyed by $(Z_s, A)$---or the coordinate
+must be chosen for robustness to resampling, at a measurable cost in detection power.
+
+These four requirements are why our substrate is built from transparent stage functions over
+explicit parent-state dictionaries rather than on top of an agent framework. A framework that owns
+state passing and sampling internally makes the first three requirements awkward and the fourth
+close to unobtainable, and it removes the ability to demonstrate by inspection that a stage never
+saw the descriptor. We regard this as a property the audited system must supply, not a limitation
+of the audit: a pipeline whose intermediate states cannot be addressed and replayed is one whose
+stage-level fairness is not identifiable by any method, and saying so is part of what the
+framework contributes.
+
 \paragraph{Why endpoint auditing cannot substitute}
 Two consequences of the decomposition explain why an output-only audit is not a cheaper
 approximation of this one. First, empirically, a trajectory can be process-sensitive while its
