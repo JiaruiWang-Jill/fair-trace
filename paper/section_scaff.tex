@@ -35,6 +35,9 @@ transition with $\phi_s$ its audited projection. Define the crossover outcome
   Y^{i,j}_s = \phi_s\!\left(f_s(Z^{i}_s,\, A = j;\, \epsilon)\right),
   \qquad i, j \in \{a, a'\},
   \label{eq:crossover}
+  %% Alias so cross-references written against the main_yd.tex/SCAFF label set
+  %% (paper/results_controlled.tex) resolve against this equation without duplicating it.
+  \label{eq:crossovercell}
 \end{equation}
 in which the first index selects \emph{whose inherited state} the stage is supplied and the second
 selects \emph{which descriptor the stage itself is shown}. The four cells of
@@ -48,6 +51,7 @@ divergence,
 \begin{equation}
   \Dnat_s(c, a) = d_s\!\left(Y^{a,a}_s,\, Y^{a',a'}_s\right),
   \label{eq:dnat}
+  \label{eq:natural}
 \end{equation}
 is the diagonal contrast, and is exactly what a stage-wise comparison of paired trajectories
 measures. Direct sensitivity holds the parent state fixed and swaps only the descriptor,
@@ -56,6 +60,7 @@ measures. Direct sensitivity holds the parent state fixed and swaps only the des
     d_s\!\left(Y^{a,a}_s,\, Y^{a,a'}_s\right) +
     d_s\!\left(Y^{a',a}_s,\, Y^{a',a'}_s\right)\right],
   \label{eq:ddirect}
+  \label{eq:direct}
 \end{equation}
 averaging over the two parent states so that the estimate does not depend on which arm is treated
 as the reference. Inherited dependence holds the descriptor fixed and swaps the parent state,
@@ -64,6 +69,7 @@ as the reference. Inherited dependence holds the descriptor fixed and swaps the 
     d_s\!\left(Y^{a,a}_s,\, Y^{a',a}_s\right) +
     d_s\!\left(Y^{a,a'}_s,\, Y^{a',a'}_s\right)\right].
   \label{eq:dinherited}
+  \label{eq:state}
 \end{equation}
 
 The interpretation of each is fixed by what it holds constant. A non-zero $\DA_s$ can only arise
@@ -90,7 +96,7 @@ which a stage both reads the attribute and receives an already-corrupted state; 
 \emph{invariant} otherwise. The diagnosis is defined per conversation and attribute value. A
 corpus mean over these coordinates is a summary of a distribution and is not itself a verdict:
 a stage that is directly sensitive on a minority of conversations will average below any useful
-margin, which is why Section~\ref{sec:scaff-results} reports the distribution of per-conversation
+margin, which is why Section~\ref{sec:controlled} reports the distribution of per-conversation
 diagnoses alongside the means.
 
 \paragraph{Three claims, separated}
@@ -167,13 +173,22 @@ draw must be shared by other means---caching completions keyed by $(Z_s, A)$---o
 must be chosen for robustness to resampling, at a measurable cost in detection power.
 
 These four requirements are why our substrate is built from transparent stage functions over
-explicit parent-state dictionaries rather than on top of an agent framework. A framework that owns
-state passing and sampling internally makes the first three requirements awkward and the fourth
-close to unobtainable, and it removes the ability to demonstrate by inspection that a stage never
-saw the descriptor. We regard this as a property the audited system must supply, not a limitation
-of the audit: a pipeline whose intermediate states cannot be addressed and replayed is one whose
-stage-level fairness is not identifiable by any method, and saying so is part of what the
-framework contributes.
+explicit parent-state dictionaries rather than on top of an agent-orchestration framework such as
+LangChain. A chain built on such a framework composes stages behind an interface designed to make
+state \emph{implicit}---context is threaded through prompt templates and memory objects that the
+chain manages internally, not exposed as a parent-state object the auditor can name, substitute,
+and hold fixed. That is precisely what the crossover of Equation~\eqref{eq:crossovercell} requires
+at each of its four cells: $Z_s$ addressable, so it can be referred to at all; $Z_s$ holdable and
+replayable, so a stage can be re-run in isolation on a substituted parent state and its descendants
+re-run after it; and it must be provable that a stage did not observe the descriptor, which a
+framework that owns prompt assembly and tool-calling internally does not let an auditor establish
+by inspection---one can observe that a chain's output does not obviously depend on $A$, but not
+prove that no internal step read it. A framework that owns state passing and sampling internally
+makes the first three requirements awkward and the fourth close to unobtainable, and it removes the
+ability to demonstrate by inspection that a stage never saw the descriptor. We regard this as a
+property the audited system must supply, not a limitation of the audit: a pipeline whose
+intermediate states cannot be addressed and replayed is one whose stage-level fairness is not
+identifiable by any method, and saying so is part of what the framework contributes.
 
 \paragraph{Why endpoint auditing cannot substitute}
 Two consequences of the decomposition explain why an output-only audit is not a cheaper

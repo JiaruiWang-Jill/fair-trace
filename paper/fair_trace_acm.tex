@@ -172,7 +172,10 @@ depend on $A$?), $\Dutility$ and $\Dexposure$ at \stage{Rank} (do ranked
 relevance and exposure depend on $A$?), $\Dtransparency$ at \stage{Explain} (do
 the stated reasons remain faithful to the agent's actual reasoning, regardless of
 $A$?), and $\Dmemory$ (do disparities compound across turns as the agent's memory
-updates?).
+updates?). Each of these deltas, taken on its own, is a diagonal contrast between
+the two counterfactual arms---an instance of the natural divergence $D_s^{\mathrm{nat}}$
+of Section~\ref{sec:scaff}---and by itself answers only \emph{whether} a stage's
+output differs, not \emph{why}.
 
 Measuring these quantities stage by stage is necessary but not sufficient,
 because a per-stage difference is not a per-stage cause. The stages form a chain:
@@ -225,7 +228,7 @@ LLM, retriever, or domain used to instantiate it.
     controlled two-domain substrate with a dependence planted at a known stage,
     the coordinate recovers the planted stage in all 48 scenarios, and repairing
     the stage it implicates removes substantially more downstream disparity than
-    repairing a stage it exonerates (Section~\ref{sec:scaff-results}).
+    repairing a stage it exonerates (Section~\ref{sec:controlled}).
   \item Evidence that endpoint auditing cannot substitute for this, both
     empirically---just over half of process-sensitive trajectories are
     endpoint-equivalent---and structurally, since \stage{Explain} and
@@ -532,6 +535,18 @@ evidence is not.
 
 \subsubsection{Stage-Wise Fairness Deltas}
 \label{sec:stage-deltas}
+
+The five deltas defined below are each an instance of the stage-specific distance $d_s$ that the
+crossover of Section~\ref{sec:scaff} decomposes: computed directly between the neutral and
+sensitive trajectories as in this subsection, a delta is the diagonal contrast $D_s^{\mathrm{nat}}$
+of Equation~\eqref{eq:natural}, and conflates a stage's own response to $A$ with whatever it
+inherited from an already-diverged predecessor. On the ReDial--MovieLens instantiation reported in
+Sections~\ref{sec:metrics} and~\ref{sec:results}, we report the deltas at this diagonal level
+only; decomposing them into $D_s^{A}$ and $D_s^{Z}$ on a real agent, as Section~\ref{sec:controlled}
+does on the controlled substrate, requires re-executing a stage on a substituted parent state and
+has not been run on this instantiation. That decomposition is future work here, not a result
+reported below, and the per-stage numbers that follow should be read as $D_s^{\mathrm{nat}}$
+rather than as an attribution.
 
 Each stage's delta instantiates the invariance benefit with an operator
 appropriate to the type of that stage's observable. We adopt one sign convention
@@ -1027,11 +1042,11 @@ with results averaged over the full curated conversation set.
 \section{Results}
 \label{sec:results}
 
-\input{section_scaff_results.tex}
+\input{results_controlled.tex}
 
 %% TODO: stage-wise metric tables averaged over the curated ReDial conversation set,
 %% LLM-as-judge score summary, the stage-trajectory figure, and localization accuracy as a
-%% function of planted effect size (Section~\ref{sec:scaff-localization}).
+%% function of planted effect size (Section~\ref{sec:controlled-step2}).
 
 %% ===========================================================================
 \section{Discussion}
