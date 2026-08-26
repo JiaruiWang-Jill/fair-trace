@@ -1,0 +1,965 @@
+{
+  "containment": {
+    "n_control_stage_outputs_compared": 800,
+    "n_leaks": 0
+  },
+  "validity_gate": {
+    "n_trajectories": 1920,
+    "n_excluded": 0,
+    "n_negative_controls_rejected": 5
+  },
+  "rank_metric_comparison": {
+    "shared_eps": [
+      {
+        "metric": "top1_gap",
+        "effect": 0.625,
+        "floor": 0.0,
+        "separation": null,
+        "auc": 1.0,
+        "repeat_noise": 0.7708,
+        "effect_over_noise": 0.8108,
+        "usable": true
+      },
+      {
+        "metric": "top3_jaccard",
+        "effect": 0.4069,
+        "floor": 0.0,
+        "separation": null,
+        "auc": 1.0,
+        "repeat_noise": 0.5676,
+        "effect_over_noise": 0.7168,
+        "usable": true
+      },
+      {
+        "metric": "rbo_p90",
+        "effect": 0.3385,
+        "floor": 0.0,
+        "separation": null,
+        "auc": 1.0,
+        "repeat_noise": 0.4776,
+        "effect_over_noise": 0.7088,
+        "usable": true
+      },
+      {
+        "metric": "kendall_tau",
+        "effect": 0.3688,
+        "floor": 0.0,
+        "separation": null,
+        "auc": 1.0,
+        "repeat_noise": 0.495,
+        "effect_over_noise": 0.7449,
+        "usable": true
+      },
+      {
+        "metric": "ndcg_delta",
+        "effect": 0.0367,
+        "floor": 0.0,
+        "separation": null,
+        "auc": 1.0,
+        "repeat_noise": 0.0444,
+        "effect_over_noise": 0.8266,
+        "usable": true
+      }
+    ],
+    "independent_eps": [
+      {
+        "metric": "ndcg_delta",
+        "effect": 0.0434,
+        "floor": 0.0295,
+        "separation": 1.4707,
+        "auc": 0.8035,
+        "repeat_noise": 0.0422,
+        "effect_over_noise": 1.0271,
+        "usable": true
+      },
+      {
+        "metric": "top3_jaccard",
+        "effect": 0.565,
+        "floor": 0.5174,
+        "separation": 1.0921,
+        "auc": 0.6835,
+        "repeat_noise": 0.5624,
+        "effect_over_noise": 1.0046,
+        "usable": true
+      },
+      {
+        "metric": "kendall_tau",
+        "effect": 0.5262,
+        "floor": 0.483,
+        "separation": 1.0895,
+        "auc": 0.6795,
+        "repeat_noise": 0.4939,
+        "effect_over_noise": 1.0656,
+        "usable": true
+      },
+      {
+        "metric": "rbo_p90",
+        "effect": 0.452,
+        "floor": 0.4212,
+        "separation": 1.0733,
+        "auc": 0.6592,
+        "repeat_noise": 0.4736,
+        "effect_over_noise": 0.9544,
+        "usable": true
+      },
+      {
+        "metric": "top1_gap",
+        "effect": 0.7906,
+        "floor": 0.7562,
+        "separation": 1.0455,
+        "auc": 0.5662,
+        "repeat_noise": 0.7747,
+        "effect_over_noise": 1.0206,
+        "usable": true
+      }
+    ]
+  },
+  "tau_calibrated": 0.0,
+  "margin_sweep": [
+    {
+      "tau": 0.0,
+      "accuracy": 1.0,
+      "recall": 1.0,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 100
+    },
+    {
+      "tau": 0.02,
+      "accuracy": 0.9667,
+      "recall": 0.96,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 96
+    },
+    {
+      "tau": 0.04,
+      "accuracy": 0.9167,
+      "recall": 0.9,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 90
+    },
+    {
+      "tau": 0.06,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.08,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.1,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.12,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.14,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.16,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.18,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.2,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.22,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.24,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.26,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.28,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.3,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.32,
+      "accuracy": 0.8333,
+      "recall": 0.8,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 80
+    },
+    {
+      "tau": 0.34,
+      "accuracy": 0.5,
+      "recall": 0.4,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 40
+    },
+    {
+      "tau": 0.36,
+      "accuracy": 0.5,
+      "recall": 0.4,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 40
+    },
+    {
+      "tau": 0.38,
+      "accuracy": 0.5,
+      "recall": 0.4,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 40
+    },
+    {
+      "tau": 0.4,
+      "accuracy": 0.5,
+      "recall": 0.4,
+      "precision": 1.0,
+      "false_positive_rate": 0.0,
+      "n_flagged": 40
+    }
+  ],
+  "localization": {
+    "accuracy": 1.0,
+    "n_scenarios": 120,
+    "n_correct": 120,
+    "wilson_lo": 0.969,
+    "wilson_hi": 1.0,
+    "boot_lo": 1.0,
+    "boot_hi": 1.0,
+    "accuracy_at_legacy_tau": 0.8333
+  },
+  "coordinates_with_ci": [
+    {
+      "stage": "Elicit",
+      "coordinate": "natural",
+      "mean": 0.0556,
+      "lo": 0.0333,
+      "hi": 0.0778
+    },
+    {
+      "stage": "Retrieve",
+      "coordinate": "natural",
+      "mean": 0.2781,
+      "lo": 0.2076,
+      "hi": 0.3514
+    },
+    {
+      "stage": "Rank",
+      "coordinate": "natural",
+      "mean": 0.1119,
+      "lo": 0.0809,
+      "hi": 0.1447
+    },
+    {
+      "stage": "Explain",
+      "coordinate": "natural",
+      "mean": 0.1667,
+      "lo": 0.125,
+      "hi": 0.2125
+    },
+    {
+      "stage": "Memory",
+      "coordinate": "natural",
+      "mean": 0.1111,
+      "lo": 0.0833,
+      "hi": 0.1389
+    },
+    {
+      "stage": "Elicit",
+      "coordinate": "direct",
+      "mean": 0.0556,
+      "lo": 0.0333,
+      "hi": 0.0778
+    },
+    {
+      "stage": "Retrieve",
+      "coordinate": "direct",
+      "mean": 0.1394,
+      "lo": 0.0848,
+      "hi": 0.1992
+    },
+    {
+      "stage": "Rank",
+      "coordinate": "direct",
+      "mean": 0.0061,
+      "lo": 0.0036,
+      "hi": 0.0089
+    },
+    {
+      "stage": "Explain",
+      "coordinate": "direct",
+      "mean": 0.0833,
+      "lo": 0.05,
+      "hi": 0.1167
+    },
+    {
+      "stage": "Memory",
+      "coordinate": "direct",
+      "mean": 0.0556,
+      "lo": 0.0361,
+      "hi": 0.0778
+    },
+    {
+      "stage": "Elicit",
+      "coordinate": "inherited",
+      "mean": 0.0,
+      "lo": 0.0,
+      "hi": 0.0
+    },
+    {
+      "stage": "Retrieve",
+      "coordinate": "inherited",
+      "mean": 0.1387,
+      "lo": 0.0839,
+      "hi": 0.1968
+    },
+    {
+      "stage": "Rank",
+      "coordinate": "inherited",
+      "mean": 0.1058,
+      "lo": 0.0745,
+      "hi": 0.1389
+    },
+    {
+      "stage": "Explain",
+      "coordinate": "inherited",
+      "mean": 0.0833,
+      "lo": 0.05,
+      "hi": 0.1167
+    },
+    {
+      "stage": "Memory",
+      "coordinate": "inherited",
+      "mean": 0.0556,
+      "lo": 0.0333,
+      "hi": 0.0778
+    },
+    {
+      "stage": "Elicit",
+      "coordinate": "noise",
+      "mean": 0.0,
+      "lo": 0.0,
+      "hi": 0.0
+    },
+    {
+      "stage": "Retrieve",
+      "coordinate": "noise",
+      "mean": 0.181,
+      "lo": 0.1609,
+      "hi": 0.2017
+    },
+    {
+      "stage": "Rank",
+      "coordinate": "noise",
+      "mean": 0.0444,
+      "lo": 0.0391,
+      "hi": 0.0498
+    },
+    {
+      "stage": "Explain",
+      "coordinate": "noise",
+      "mean": 0.0,
+      "lo": 0.0,
+      "hi": 0.0
+    },
+    {
+      "stage": "Memory",
+      "coordinate": "noise",
+      "mean": 0.0,
+      "lo": 0.0,
+      "hi": 0.0
+    }
+  ],
+  "confusion": [
+    {
+      "planted_stage": "Elicit",
+      "Elicit": 20,
+      "Explain": 0,
+      "Memory": 0,
+      "Rank": 0,
+      "Retrieve": 0,
+      "none": 0
+    },
+    {
+      "planted_stage": "Explain",
+      "Elicit": 0,
+      "Explain": 20,
+      "Memory": 0,
+      "Rank": 0,
+      "Retrieve": 0,
+      "none": 0
+    },
+    {
+      "planted_stage": "Memory",
+      "Elicit": 0,
+      "Explain": 0,
+      "Memory": 20,
+      "Rank": 0,
+      "Retrieve": 0,
+      "none": 0
+    },
+    {
+      "planted_stage": "Rank",
+      "Elicit": 0,
+      "Explain": 0,
+      "Memory": 0,
+      "Rank": 20,
+      "Retrieve": 0,
+      "none": 0
+    },
+    {
+      "planted_stage": "Retrieve",
+      "Elicit": 0,
+      "Explain": 0,
+      "Memory": 0,
+      "Rank": 0,
+      "Retrieve": 20,
+      "none": 0
+    },
+    {
+      "planted_stage": "none",
+      "Elicit": 0,
+      "Explain": 0,
+      "Memory": 0,
+      "Rank": 0,
+      "Retrieve": 0,
+      "none": 20
+    }
+  ],
+  "seed_sweep": {
+    "per_seed": [
+      {
+        "seed": 42,
+        "tau_calibrated": 0.0,
+        "accuracy": 1.0,
+        "wilson_lo": 0.969,
+        "wilson_hi": 1.0,
+        "accuracy_at_legacy_tau": 0.8333
+      },
+      {
+        "seed": 43,
+        "tau_calibrated": 0.0,
+        "accuracy": 1.0,
+        "wilson_lo": 0.969,
+        "wilson_hi": 1.0,
+        "accuracy_at_legacy_tau": 0.8333
+      },
+      {
+        "seed": 44,
+        "tau_calibrated": 0.0,
+        "accuracy": 1.0,
+        "wilson_lo": 0.969,
+        "wilson_hi": 1.0,
+        "accuracy_at_legacy_tau": 0.8333
+      },
+      {
+        "seed": 45,
+        "tau_calibrated": 0.0,
+        "accuracy": 1.0,
+        "wilson_lo": 0.969,
+        "wilson_hi": 1.0,
+        "accuracy_at_legacy_tau": 0.8333
+      },
+      {
+        "seed": 46,
+        "tau_calibrated": 0.0,
+        "accuracy": 0.9583,
+        "wilson_lo": 0.9062,
+        "wilson_hi": 0.9821,
+        "accuracy_at_legacy_tau": 0.8333
+      }
+    ],
+    "accuracy_min": 0.9583,
+    "accuracy_max": 1.0,
+    "accuracy_mean": 0.9917,
+    "accuracy_at_legacy_tau_mean": 0.8333,
+    "coordinate_spread": {
+      "columns": [
+        [
+          "natural",
+          "mean"
+        ],
+        [
+          "natural",
+          "min"
+        ],
+        [
+          "natural",
+          "max"
+        ],
+        [
+          "natural",
+          "std"
+        ],
+        [
+          "direct",
+          "mean"
+        ],
+        [
+          "direct",
+          "min"
+        ],
+        [
+          "direct",
+          "max"
+        ],
+        [
+          "direct",
+          "std"
+        ],
+        [
+          "inherited",
+          "mean"
+        ],
+        [
+          "inherited",
+          "min"
+        ],
+        [
+          "inherited",
+          "max"
+        ],
+        [
+          "inherited",
+          "std"
+        ],
+        [
+          "noise",
+          "mean"
+        ],
+        [
+          "noise",
+          "min"
+        ],
+        [
+          "noise",
+          "max"
+        ],
+        [
+          "noise",
+          "std"
+        ]
+      ],
+      "index": [
+        "Elicit",
+        "Retrieve",
+        "Rank",
+        "Explain",
+        "Memory"
+      ],
+      "data": [
+        [
+          0.0556,
+          0.0556,
+          0.0556,
+          0.0,
+          0.0556,
+          0.0556,
+          0.0556,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.267,
+          0.2425,
+          0.2784,
+          0.015,
+          0.1465,
+          0.1394,
+          0.1521,
+          0.0047,
+          0.1206,
+          0.0977,
+          0.1387,
+          0.0162,
+          0.171,
+          0.1118,
+          0.235,
+          0.051
+        ],
+        [
+          0.1108,
+          0.0898,
+          0.1319,
+          0.0155,
+          0.0048,
+          0.0026,
+          0.0061,
+          0.0015,
+          0.106,
+          0.0872,
+          0.1264,
+          0.0147,
+          0.0428,
+          0.0301,
+          0.0498,
+          0.0075
+        ],
+        [
+          0.1667,
+          0.1667,
+          0.1667,
+          0.0,
+          0.0833,
+          0.0833,
+          0.0833,
+          0.0,
+          0.0833,
+          0.0833,
+          0.0833,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        [
+          0.1111,
+          0.1111,
+          0.1111,
+          0.0,
+          0.0556,
+          0.0556,
+          0.0556,
+          0.0,
+          0.0556,
+          0.0556,
+          0.0556,
+          0.0,
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ]
+      ]
+    }
+  },
+  "repair": {
+    "legacy_circular_frac": [
+      {
+        "index": "Elicit",
+        "Elicit": 1.0,
+        "Retrieve": 0.9393,
+        "Rank": 1.0,
+        "Explain": 0.0,
+        "Memory": 0.0
+      },
+      {
+        "index": "Retrieve",
+        "Elicit": 0.0,
+        "Retrieve": 1.0,
+        "Rank": 1.0,
+        "Explain": 0.0,
+        "Memory": 0.0
+      },
+      {
+        "index": "Rank",
+        "Elicit": 0.0,
+        "Retrieve": 0.0,
+        "Rank": 1.0,
+        "Explain": 0.0,
+        "Memory": 0.0
+      },
+      {
+        "index": "Explain",
+        "Elicit": null,
+        "Retrieve": null,
+        "Rank": null,
+        "Explain": null,
+        "Memory": null
+      },
+      {
+        "index": "Memory",
+        "Elicit": null,
+        "Retrieve": null,
+        "Rank": null,
+        "Explain": null,
+        "Memory": null
+      }
+    ],
+    "downstream_frac": [
+      {
+        "index": "Elicit",
+        "Elicit": 1.0,
+        "Retrieve": 0.1996,
+        "Rank": 0.0,
+        "Explain": 0.0,
+        "Memory": null
+      },
+      {
+        "index": "Retrieve",
+        "Elicit": 0.0,
+        "Retrieve": 1.0,
+        "Rank": null,
+        "Explain": null,
+        "Memory": null
+      },
+      {
+        "index": "Rank",
+        "Elicit": 0.0,
+        "Retrieve": 0.0,
+        "Rank": null,
+        "Explain": null,
+        "Memory": null
+      },
+      {
+        "index": "Explain",
+        "Elicit": 0.0,
+        "Retrieve": 0.0,
+        "Rank": 0.0,
+        "Explain": null,
+        "Memory": null
+      },
+      {
+        "index": "Memory",
+        "Elicit": 0.0,
+        "Retrieve": 0.0,
+        "Rank": 0.0,
+        "Explain": 0.0,
+        "Memory": null
+      }
+    ],
+    "downstream_before": [
+      {
+        "index": "Elicit",
+        "Elicit": 0.4726,
+        "Retrieve": 0.3527,
+        "Rank": 0.4167,
+        "Explain": 0.3333,
+        "Memory": null
+      },
+      {
+        "index": "Retrieve",
+        "Elicit": 0.3116,
+        "Retrieve": 0.1366,
+        "Rank": 0.0,
+        "Explain": 0.0,
+        "Memory": null
+      },
+      {
+        "index": "Rank",
+        "Elicit": 0.0092,
+        "Retrieve": 0.0122,
+        "Rank": 0.0,
+        "Explain": 0.0,
+        "Memory": null
+      },
+      {
+        "index": "Explain",
+        "Elicit": 0.125,
+        "Retrieve": 0.1667,
+        "Rank": 0.25,
+        "Explain": 0.0,
+        "Memory": null
+      },
+      {
+        "index": "Memory",
+        "Elicit": 0.0833,
+        "Retrieve": 0.1111,
+        "Rank": 0.1667,
+        "Explain": 0.3333,
+        "Memory": null
+      }
+    ]
+  },
+  "masking": {
+    "all": [
+      {
+        "process_sensitive": "no direct process sensitivity",
+        "endpoint different": 0,
+        "endpoint equivalent": 20
+      },
+      {
+        "process_sensitive": "process sensitive",
+        "endpoint different": 56,
+        "endpoint equivalent": 44
+      }
+    ],
+    "endpoint_can_move": [
+      {
+        "process_sensitive": "no direct process sensitivity",
+        "endpoint different": 0,
+        "endpoint equivalent": 20
+      },
+      {
+        "process_sensitive": "process sensitive",
+        "endpoint different": 56,
+        "endpoint equivalent": 4
+      }
+    ],
+    "structurally_blind": [
+      {
+        "process_sensitive": "process sensitive",
+        "endpoint equivalent": 40
+      }
+    ],
+    "masked_rate_power_only": 0.05,
+    "n_can_move": 80,
+    "n_blind": 40,
+    "blind_max_endpoint_distance": 0.0,
+    "two_turn_by_planted_stage": [
+      {
+        "planted_stage": "Elicit",
+        "turn2_endpoint_distance": 0.2236,
+        "turn2_endpoint_different": 1.0
+      },
+      {
+        "planted_stage": "Retrieve",
+        "turn2_endpoint_distance": 0.4175,
+        "turn2_endpoint_different": 1.0
+      },
+      {
+        "planted_stage": "Rank",
+        "turn2_endpoint_distance": 0.0393,
+        "turn2_endpoint_different": 0.9
+      },
+      {
+        "planted_stage": "Explain",
+        "turn2_endpoint_distance": 0.4084,
+        "turn2_endpoint_different": 1.0
+      },
+      {
+        "planted_stage": "Memory",
+        "turn2_endpoint_distance": 0.1634,
+        "turn2_endpoint_different": 1.0
+      },
+      {
+        "planted_stage": "none",
+        "turn2_endpoint_distance": 0.0,
+        "turn2_endpoint_different": 0.0
+      }
+    ]
+  },
+  "config": {
+    "quick": false,
+    "n_scenarios": 120,
+    "n_per_stage": 20,
+    "repeats": 8,
+    "seeds": [
+      42,
+      43,
+      44,
+      45,
+      46
+    ],
+    "catalog_size": 60,
+    "rank_jitter": 0.1,
+    "retrieve_temp": 0.06,
+    "primary_rank_metric": "ndcg_delta",
+    "legacy_rank_metric": "top1_gap",
+    "legacy_margin": 0.1,
+    "endpoint_margin": 0.02,
+    "n_bootstrap": 4000
+  },
+  "coordinates": [
+    {
+      "stage": "Elicit",
+      "natural": 0.0556,
+      "direct": 0.0556,
+      "inherited": 0.0,
+      "noise": 0.0
+    },
+    {
+      "stage": "Retrieve",
+      "natural": 0.2781,
+      "direct": 0.1394,
+      "inherited": 0.1387,
+      "noise": 0.181
+    },
+    {
+      "stage": "Rank",
+      "natural": 0.1119,
+      "direct": 0.0061,
+      "inherited": 0.1058,
+      "noise": 0.0444
+    },
+    {
+      "stage": "Explain",
+      "natural": 0.1667,
+      "direct": 0.0833,
+      "inherited": 0.0833,
+      "noise": 0.0
+    },
+    {
+      "stage": "Memory",
+      "natural": 0.1111,
+      "direct": 0.0556,
+      "inherited": 0.0556,
+      "noise": 0.0
+    }
+  ]
+}
