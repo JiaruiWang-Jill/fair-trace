@@ -88,12 +88,38 @@ decoration: a stage whose $\DA_s$ is smaller than its own repeat variance has no
 attribute-sensitive at all, and a decision rule applied without it converts decoding
 stochasticity into findings.
 
+\paragraph{The decision threshold is the stage's own floor}
+That fourth coordinate is also what supplies the threshold, and the point is worth stating
+precisely because a fixed margin chosen by the auditor is the easiest place for a stage-level
+audit to manufacture results. Write $\nu_s$ for the within-condition draw at stage $s$: the same
+estimator as $\DA_s$, evaluated with the descriptor held fixed and only the exogenous draw
+varied, averaged over the same two parent states. The margin is then the upper $1-\alpha$
+quantile of the null that $\nu_s$ induces, $\tau_s = Q_{1-\alpha}(\nu_s)$, computed per stage
+rather than once for the pipeline, because per-action instability varies by an order of magnitude
+across the actions of a single agent---the clinical audit of Bellibatlu et al.~\cite{instabilityfloor} measures
+$8.7\%$ of actions changing under identical re-run on one model and $6.7\%$ on a second, with
+per-action floors from $0.022$ to $0.179$, a spread any single global number erases.
+
+Two matchings between the effect and its null are load-bearing, and both follow the
+like-with-like principle that AgentFairBench~\cite{agentfairbench} makes explicit. First, \emph{arity}: $\DA_s$
+is a two-cell contrast, so its null must also be a two-cell contrast, which is what $\nu_s$ is by
+construction; where sensitivity is instead summarised as a spread over $G$ protected values, the
+null must be the same spread over $G$ identical re-runs, since the expected range of $G$ draws
+grows with $G$ for fixed underlying noise and a $G$-valued spread judged against a two-run gap
+reports that growth as signal. Second, \emph{aggregation}: a verdict taken on a mean of $n$ cells
+is judged against the sampling distribution of the mean of $n$ null cells, not against
+single-cell noise. Thresholding a corpus mean against a per-cell floor is the same category error
+as thresholding a $G$-valued spread against a two-run gap, and both are avoided by constructing
+the null at whatever level the decision is actually taken.
+
 \paragraph{Reading the coordinates}
-Fixing a margin $\tau$ above the noise floor, each stage is assigned one of four diagnoses:
-\emph{direct} when $\DA_s > \tau$; \emph{inherited} when $\DA_s \leq \tau$ while $\Dnat_s$ and
-$\DZ_s$ both exceed $\tau$; \emph{mixed} when $\DA_s$ and $\DZ_s$ both exceed $\tau$, the case in
-which a stage both reads the attribute and receives an already-corrupted state; and
-\emph{invariant} otherwise. The diagnosis is defined per conversation and attribute value. A
+With the per-stage margin $\tau_s$ fixed as above, each stage is assigned one of four diagnoses:
+\emph{direct} when $\DA_s > \tau_s$; \emph{inherited} when $\DA_s \leq \tau_s$ while $\Dnat_s$ and
+$\DZ_s$ both exceed $\tau_s$; \emph{mixed} when $\DA_s$ and $\DZ_s$ both exceed $\tau_s$, the case
+in which a stage both reads the attribute and receives an already-corrupted state; and
+\emph{invariant} otherwise. Every table reports $\tau_s$ beside the coordinate it judges, so that
+a diagnosis and the evidence available to support it are read together. The diagnosis is defined
+per conversation and attribute value. A
 corpus mean over these coordinates is a summary of a distribution and is not itself a verdict:
 a stage that is directly sensitive on a minority of conversations will average below any useful
 margin, which is why Section~\ref{sec:controlled} reports the distribution of per-conversation
@@ -111,6 +137,16 @@ be a legitimate input to a safety filter and an illegitimate one to preference i
 requires a reference $\Omega_s$ against which one output can be called better than the other:
 whether an additional clarification was informative, whether a candidate set had lower recall,
 whether a ranking had lower $\NDCG@K$, whether a retained memory fact was supported.
+
+Keeping the first and third apart is not a stylistic preference. CFaiRLLM~\cite{cfairllm} shows
+that scoring recommendations against a neutral-prompt reference---any difference counting as
+unfairness---reports systematically more unfairness than scoring the same recommendations against
+the user's held-out true preferences, and the mechanism is visible in the estimators themselves:
+$\DA_s$ is a non-negative distance, in which noise accumulates and cannot cancel, whereas a signed
+quality gap against a reference $\Omega_s$ can. We therefore report the two as adjacent
+coordinates and never combine them into a single fairness score, so that a stage which responds to
+the descriptor while doing its job equally well under both values is recorded as exactly that,
+and not as harm.
 
 This ordering has a consequence for what an audit may report. Where a defensible $\Omega_s$
 exists, all three claims can be made. Where none does, sensitivity and procedural status remain
@@ -200,3 +236,35 @@ downstream of the ranked list and therefore \emph{cannot} change it within a tur
 those two stages an endpoint audit is not underpowered but blind by construction, and the
 persistence of a \stage{Memory} fault only becomes observable on a subsequent turn---which is why
 the multi-turn substrate of Section~\ref{sec:substrate} is load-bearing rather than incidental.
+
+\paragraph{Relation to process-level fairness diagnosis}
+The closest neighbour to the crossover is process-aware diagnosis of multi-agent decision
+systems~\cite{scopedhiring}, which logs the full trajectory of a two-stage hiring committee and
+finds process-level signals $2.7$ to $4.7$ times larger than outcome-level ones, with balanced
+hire rates concealing unequal treatment inside the process. That is the same empirical claim as
+the preceding paragraph, established independently and at a scale this framework has not reached,
+and we take it as support for the premise rather than as a competing account.
+
+The difference is what the decomposition can say once a stage-level signal is found. A pathway
+decomposition of that kind separates a first-stage pass gap from a second-stage conversion gap,
+which localizes \emph{where a gap appears} along the pipeline. It cannot separate the two ways a
+gap can appear at a stage, because the design never substitutes upstream state: every downstream
+stage in a treated trajectory receives an already-treated input, so a stage that never inspects
+the protected cue still shows a gap purely because what it was handed differs. In the notation of
+this section, such a design measures $\Dnat_s$ per stage---the diagonal contrast---and
+Equations~\eqref{eq:ddirect} and~\eqref{eq:dinherited} are precisely how that quantity is
+decomposed. The off-diagonal cells the decomposition requires are counterfactuals no end-to-end
+replay produces, which is the reason the four requirements above are stated as requirements on
+the audited system.
+
+The difference is operational rather than terminological, and the repair test above is what makes
+it so. A stage with high $\Dnat_s$ and high $\DZ_s$ but $\DA_s$ below its floor is functioning
+correctly and should not be touched; the fault is upstream, and patching the transmitting stage
+treats a symptom. A stage with $\DA_s$ above its floor is where the descriptor entered. The
+prediction that follows---repairing the implicated stage removes substantially more downstream
+disparity than repairing an exonerated one---is one a pathway decomposition cannot make, because
+it does not distinguish the two cases in the first place. It is also the same shape of validation
+that the process-aware diagnosis uses when it contrasts a targeted prompt repair, which cuts
+investigative burden by $72.3\%$, against a generic fairness reminder, which does not; the
+difference is that our targeted arm is defined by the crossover's own attribution and, on the
+controlled substrate, checked against a planted answer key.
