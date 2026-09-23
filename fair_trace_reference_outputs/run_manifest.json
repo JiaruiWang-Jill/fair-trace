@@ -1,0 +1,24 @@
+{
+  "seed": 42,
+  "datasets": [
+    "movies",
+    "restaurants"
+  ],
+  "attributes": {
+    "sex": [
+      "man",
+      "woman"
+    ],
+    "age": [
+      "teen",
+      "young",
+      "adult"
+    ]
+  },
+  "neutral_condition": "unspecified",
+  "scenarios_per_dataset": 24,
+  "repeats": 4,
+  "top_k": 5,
+  "direct_effect_margin": 0.1,
+  "binary_identity_checked": true
+}
