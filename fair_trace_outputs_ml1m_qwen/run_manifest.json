@@ -1,0 +1,28 @@
+{
+  "dataset": "MovieLens-1M",
+  "model": "qwen3.5:9b",
+  "temperature": 0.7,
+  "num_ctx": 8192,
+  "n_users": 150,
+  "repeats": 2,
+  "top_k": 10,
+  "shortlist": 40,
+  "retrieve_k": 20,
+  "like_threshold": 4,
+  "age_buckets": {
+    "1": "teen",
+    "18": "young",
+    "25": "young",
+    "35": "adult",
+    "45": "adult",
+    "50": "adult",
+    "56": "adult"
+  },
+  "usage": {
+    "calls": 9680,
+    "cache_hits": 30,
+    "retries": 0,
+    "parse_errors": 0
+  },
+  "finished": "2026-10-05 09:37:35"
+}
