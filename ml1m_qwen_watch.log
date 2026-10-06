@@ -1,0 +1,32 @@
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.ml1m_qwen_pid
+	.ml1m_qwen_watch_pid
+	1005_FAIR_TRACE_SCAFF_qwen_core.ipynb.allfigs.bak
+	ml-1m.zip
+	ml-1m/
+	ml1m_qwen_analyze.log
+	ml1m_qwen_run.log
+	ml1m_qwen_stage_cache.jsonl
+	ml1m_qwen_watch.log
+
+nothing added to commit but untracked files present (use "git add" to track)
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	.ml1m_qwen_pid
+	.ml1m_qwen_watch_pid
+	1005_FAIR_TRACE_SCAFF_qwen_core.ipynb.allfigs.bak
+	ml-1m.zip
+	ml-1m/
+	ml1m_qwen_analyze.log
+	ml1m_qwen_run.log
+	ml1m_qwen_stage_cache.jsonl
+	ml1m_qwen_watch.log
+
+nothing added to commit but untracked files present (use "git add" to track)
