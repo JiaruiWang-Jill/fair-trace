@@ -6,6 +6,7 @@
   paper/figures/fig_scaff_v3_worked_example.{pdf,png}
   paper/figures/fig_scaff_v4_causal_dag.{pdf,png}
   paper/figures/fig_scaff_paper.{pdf,png}       (print-fit variant, 1:1 at ACM text width)
+  paper/figures/fig_scaff_lncs.{pdf,png}        (print-fit variant, 1:1 at LNCS text width, ECIR)
   paper/figures/fig_scaff_contact_sheet.png     (all versions side by side, for choosing)
 
 Style reference: CFaiRLLM Fig. 1 (Deldjoo & Di Noia, ACM TIST, doi 10.1145/3725853) --
@@ -180,8 +181,10 @@ def verdict(ax, x, y, label, color, *, size=FS_HEAD, ha="left"):
     text(ax, x, y, label, size=size, color=color, weight="bold", ha=ha, va="center")
 
 
-def coord_bars(ax, x, y, w, h, nat, direct, inherited, *, labels=True, size=FS_MICRO):
-    """Three small horizontal bars: natural, direct, inherited, all on [0,1]."""
+def coord_bars(ax, x, y, w, h, nat, direct, inherited, *, labels=True, size=FS_MICRO, ptu=3.1):
+    """Three small horizontal bars: natural, direct, inherited, all on [0,1].
+
+    ``ptu`` is points per y-unit on the canvas, so bar thickness tracks the figure size."""
     rows = [("$D^{\\mathrm{nat}}$", nat, GREY),
             ("$D^{A}$", direct, ORANGE),
             ("$D^{Z}$", inherited, PURPLE)]
@@ -189,10 +192,10 @@ def coord_bars(ax, x, y, w, h, nat, direct, inherited, *, labels=True, size=FS_M
     gap = (h - 3 * bh) / 2.0
     for k, (name, val, col) in enumerate(rows):
         by = y + h - (k + 1) * bh - k * gap
-        ax.plot([x, x + w], [by + bh / 2, by + bh / 2], color="#E4E4E4", lw=bh * 3.1,
+        ax.plot([x, x + w], [by + bh / 2, by + bh / 2], color="#E4E4E4", lw=bh * ptu,
                 solid_capstyle="butt", zorder=2)
         if val > 0:
-            ax.plot([x, x + w * val], [by + bh / 2, by + bh / 2], color=col, lw=bh * 3.1,
+            ax.plot([x, x + w * val], [by + bh / 2, by + bh / 2], color=col, lw=bh * ptu,
                     solid_capstyle="butt", zorder=3)
         if labels:
             text(ax, x - 0.8, by + bh / 2, name, size=size, color=col, ha="right", va="center")
@@ -849,6 +852,81 @@ def build_paper(outdir):
     return save(fig, outdir, "fig_scaff_paper")
 
 
+# ================================ LNCS: print-fit, 1:1 at Springer LNCS text width (122mm)
+def build_lncs(outdir):
+    """fig_scaff_paper redrawn for the ECIR (Springer LNCS) submission.
+
+    LNCS text is 122mm (4.8in) wide, so this is drawn at 4.8in and included at \\linewidth
+    with scale factor 1. LNCS puts the message of a figure in its caption, so the in-figure
+    title and the bottom summary strip of the ACM variant are dropped; what remains is the
+    crossover and the per-stage verdicts it produces.
+    """
+    fig, ax = canvas(4.8, 2.45)
+
+    # one x-unit is ~3.5pt and one y-unit ~1.8pt; sizes are the sizes that reach the page.
+    T_HEAD, T_BODY, T_SMALL = 6.8, 6.8, 6.0
+
+    # ------------------------------------------------------- left: the 2x2 crossover
+    GX, GY, CW, CH = 14.0, 30.0, 14.5, 17.0
+    ax.text(GX + CW - 3.0, 99.0, "(a) the stage crossover", fontsize=T_HEAD,
+            fontweight="bold", ha="center", va="top", color=INK)
+    text(ax, GX + CW, 87.0, "descriptor shown to the stage", size=T_SMALL, color=GREY,
+         ha="center", weight="bold")
+    text(ax, GX + CW * 0.5, 79.0, "$A=a$", size=T_BODY, color=BLUE, ha="center", weight="bold")
+    text(ax, GX + CW * 1.5, 79.0, "$A=a'$", size=T_BODY, color=ORANGE, ha="center",
+         weight="bold")
+    text(ax, GX - 1.2, GY + CH * 1.5, "$Z^{a}_s$", size=T_BODY, color=BLUE, ha="right",
+         va="center", weight="bold")
+    text(ax, GX - 1.2, GY + CH * 0.5, "$Z^{a'}_s$", size=T_BODY, color=ORANGE, ha="right",
+         va="center", weight="bold")
+    text(ax, GX - 8.8, GY + CH, "inherited\nparent state", size=T_SMALL, color=GREY,
+         ha="center", va="center", weight="bold", rotation=90)
+
+    for (row, col), lab, ec, fc in [((0, 0), "$Y^{a,a}_s$", BLUE, "#EAF3FA"),
+                                    ((0, 1), "$Y^{a,a'}_s$", MUTED, "white"),
+                                    ((1, 0), "$Y^{a',a}_s$", MUTED, "white"),
+                                    ((1, 1), "$Y^{a',a'}_s$", ORANGE, "#FDF1EA")]:
+        x, y = GX + col * CW, GY + (1 - row) * CH
+        box(ax, x, y, CW, CH, fc=fc, ec=ec, lw=0.9, r=0.8)
+        text(ax, x + CW / 2, y + CH / 2, lab, size=T_BODY, ha="center", va="center",
+             weight="bold", color=ec if ec != MUTED else INK)
+
+    for yy in (GY + CH * 1.5, GY + CH * 0.5):
+        arrow(ax, (GX + CW * 0.74, yy), (GX + CW * 1.26, yy), color=ORANGE, lw=1.0,
+              style="<|-|>", ms=4.0)
+    for xx in (GX + CW * 0.5, GX + CW * 1.5):
+        arrow(ax, (xx, GY + CH * 1.33), (xx, GY + CH * 0.67), color=PURPLE, lw=1.0,
+              style="<|-|>", ms=4.0)
+
+    text(ax, GX + CW, GY - 3.5, "row contrast: direct $D^{A}_s$",
+         size=T_SMALL, color=ORANGE, ha="center", weight="bold")
+    text(ax, GX + CW, GY - 12.0, "column contrast: inherited $D^{Z}_s$",
+         size=T_SMALL, color=PURPLE, ha="center", weight="bold")
+    text(ax, GX + CW, GY - 20.5, "diagonal: natural $D^{\\mathrm{nat}}_s$",
+         size=T_SMALL, color=GREY, ha="center", style="italic")
+
+    # ------------------------------------------- right: per-stage decomposition
+    RX, RW = 47.5, 52.5
+    ax.text(RX + RW / 2 + 1.0, 99.0, "(b) one scenario, fault planted at Elicit",
+            fontsize=T_HEAD, fontweight="bold", ha="center", va="top", color=INK)
+
+    BH, STEP = 16.2, 17.6
+    ry = 90.0
+    for st in STAGES:
+        nat, d, z = MOV001[st]
+        dg = diagnose(nat, d, z)
+        box(ax, RX, ry - BH, RW, BH, fc="white", ec="#DDDDDD", lw=0.5, r=0.5)
+        text(ax, RX + 1.0, ry - BH / 2, st.upper(), size=T_SMALL, weight="bold", va="center",
+             color=DIAG_COLOR[dg])
+        coord_bars(ax, RX + 20.0, ry - BH + 1.2, 11.0, BH - 2.4, nat, d, z, size=5.4,
+                   ptu=1.76 * 0.78)
+        verdict(ax, RX + RW - 1.0, ry - BH / 2, DIAG_LABEL[dg], DIAG_COLOR[dg], size=T_SMALL,
+                ha="right")
+        ry -= STEP
+
+    return save(fig, outdir, "fig_scaff_lncs")
+
+
 # =============================================================== contact sheet
 def contact_sheet(outdir, stems):
     import matplotlib.image as mpimg
@@ -869,13 +947,14 @@ def contact_sheet(outdir, stems):
 
 
 BUILDERS = {"v1": build_v1, "v2": build_v2, "v3": build_v3, "v4": build_v4,
-            "paper": build_paper}
+            "paper": build_paper, "lncs": build_lncs}
 STEMS = {
     "v1": "fig_scaff_v1_crossover_matrix",
     "v2": "fig_scaff_v2_stage_tape",
     "v3": "fig_scaff_v3_worked_example",
     "v4": "fig_scaff_v4_causal_dag",
     "paper": "fig_scaff_paper",
+    "lncs": "fig_scaff_lncs",
 }
 
 if __name__ == "__main__":
